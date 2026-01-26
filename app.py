@@ -48,7 +48,6 @@ lista_motivo_crm = sorted([
 
 # ==========================================
 #      SCRIPTS (MENSAGENS PENDÊNCIAS)
-#      (EM MAIÚSCULO CONFORME SOLICITADO)
 # ==========================================
 modelos_pendencias = {
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
@@ -293,11 +292,26 @@ def pagina_pendencias():
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
         
-        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        # 1. Variáveis Base
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
-        texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_cliente_str)
-        
-        # FRASES AUTOMÁTICAS (PEDIDO)
+        assinatura_nome = colab
+
+        # 2. Regra Amazon (Remove nome do colaborador)
+        if "AMAZON" in portal:
+            assinatura_nome = ""
+
+        # 3. Substituições Iniciais (Transportadora, Colaborador, Nome Cliente)
+        texto_base = texto_cru.replace("{transportadora}", transp)\
+                              .replace("{colaborador}", assinatura_nome)\
+                              .replace("(Nome do cliente)", nome_cliente_str)
+
+        # 4. Regra Via Varejo (Substitui Saudação)
+        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
+            texto_base = texto_base.replace("Olá,", "Prezado(os),")
+
+        # 5. Inserção da Frase do Pedido
         ped_str = numero_pedido if numero_pedido else "..."
         frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
         
