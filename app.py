@@ -64,10 +64,20 @@ modelos_pendencias = {
     "Reenvio de Produto": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
+# NOVAS MENSAGENS ADICIONADAS AQUI
 modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
     "ENVIO DE NF": """Olá, (Nome do cliente)!\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    # NOVAS MENSAGENS --->
+    "ENVIO DE 2° VIA NF": """Olá, (Nome do cliente)\n\nSegue em anexo a segunda via da nota fiscal solicitada.\nFico à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "CANCELAMENTO": """Olá, (Nome do cliente)\n\nRecebemos sua solicitação de cancelamento e lamentamos que tenha decidido não permanecer com a compra.\nGostaríamos de entender melhor o motivo da sua decisão antes de iniciarmos o processo de cancelamento.\nSeu feedback é essencial para que possamos melhorar continuamente nossos produtos e serviços.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "COMPROVANTE DE ENTREGA": """Olá, (Nome do cliente)\n\nSolicitamos, junto à transportadora responsável, o comprovante de entrega devidamente assinado para conferência, visto que não há reconhecimento do recebimento.\nPermanecemos no aguardo.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    # <--- FIM NOVAS MENSAGENS
+    
     "AGRADECIMENTO": """Olá, (Nome do cliente)!\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -103,8 +113,9 @@ modelos_sac = {
     "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}"""
 }
 
+# Ordena a lista de chaves (Motivos do Contato) para o Dropdown
 lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k != "OUTROS"])
-lista_motivos_contato.append("OUTROS")
+lista_motivos_contato.append("OUTROS") # Deixa "OUTROS" no final
 
 # ==========================================
 #      FUNÇÕES DE BANCO DE DADOS
@@ -151,6 +162,9 @@ def carregar_dados():
 def converter_para_excel_csv(df):
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
+# ==========================================
+#      MÁGICA DE CÓPIA (JS)
+# ==========================================
 def copiar_para_clipboard(texto):
     texto_json = json.dumps(texto)
     js = f"""
@@ -164,7 +178,9 @@ def copiar_para_clipboard(texto):
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        try {{ document.execCommand('copy'); }} catch (err) {{}}
+        try {{
+            document.execCommand('copy');
+        }} catch (err) {{}}
         document.body.removeChild(textArea);
     }}
     copyToClipboard();
@@ -173,7 +189,7 @@ def copiar_para_clipboard(texto):
     components.html(js, height=0, width=0)
 
 # ==========================================
-#      DESIGN CLEAN (SEM BLOCOS VAZIOS)
+#      DESIGN CLEAN (SIDEBAR BRANCA)
 # ==========================================
 st.markdown("""
 <style>
@@ -182,7 +198,7 @@ st.markdown("""
     .stApp { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
     
     section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
-    section[data-testid="stSidebar"] * { color: #334155 !important; }
+    section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] div { color: #334155 !important; }
     
     h1, h2, h3 { color: #0f172a !important; font-weight: 700; }
 
@@ -231,9 +247,9 @@ def pagina_pendencias():
     with col1:
         st.subheader("1. Configuração")
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
-        
-        # NOVOS CAMPOS NA PENDÊNCIA (Para salvar no Excel)
+        # NOVO CAMPO: Nome do Cliente
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
+        # CAMPOS PARA BANCO DE DADOS (OCULTOS NA MENSAGEM)
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
         
@@ -247,17 +263,16 @@ def pagina_pendencias():
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
         
-        # Tratamento do nome do cliente
-        nome_final = nome_cliente if nome_cliente else "(Nome do cliente)"
-        
-        texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_final)
+        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
+        texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_cliente_str)
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
         
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
-            # Salva Portal e NF no banco, mas não usa no texto
+            # Salva Portal e NF no banco
             salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, "-", transp)
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
@@ -278,6 +293,7 @@ def pagina_sac():
         st.subheader("1. Configuração Obrigatória")
         
         colab = st.selectbox("👤 Colaborador:", colaboradores_sac, key="colab_s")
+        # NOVO CAMPO: Nome do Cliente
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_s")
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_s")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_s")
@@ -285,9 +301,10 @@ def pagina_sac():
         
         st.markdown("---")
         
+        # Motivo do Contato em MAIÚSCULO
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos
+        # Campos Dinâmicos (Verifica substring em maiúsculo para compatibilidade)
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
@@ -346,14 +363,14 @@ def pagina_sac():
         else:
             texto_base = modelos_sac.get(opcao, "")
 
-        # Nome do Cliente
-        nome_final = nome_cliente if nome_cliente else "(Nome do cliente)"
-        texto_base = texto_base.replace("(Nome do cliente)", nome_final)
+        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
+        texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
 
-        # Regra Via Varejo
+        # Regra Via Varejo (Sobrescreve a saudação se necessário)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-            texto_base = texto_base.replace(f"Olá, {nome_final}!", "Prezado(os),")
-            texto_base = texto_base.replace(f"Olá, {nome_final}", "Prezado(os),")
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
         # Regra Frase NF Global (EXCEÇÃO: Adicionado AGRADECIMENTO)
@@ -403,6 +420,17 @@ def pagina_dashboard():
     st.title("📊 Dashboard Gerencial")
     st.markdown("Visão estratégica dos atendimentos.")
     st.markdown("---")
+
+    # UPLOAD NA BARRA LATERAL (RESTAURAR BACKUP)
+    st.sidebar.subheader("📂 Carregar Backup")
+    uploaded_file = st.sidebar.file_uploader("Subir arquivo .csv", type="csv")
+    if uploaded_file is not None:
+        try:
+            df_upload = pd.read_csv(uploaded_file, sep=';', encoding='utf-8-sig')
+            df_upload.to_csv(ARQUIVO_DADOS, index=False, sep=';', encoding='utf-8-sig')
+            st.sidebar.success("Dados carregados com sucesso!")
+        except Exception as e:
+            st.sidebar.error(f"Erro ao carregar: {e}")
 
     if not os.path.exists(ARQUIVO_DADOS):
         st.warning("Ainda não há dados registrados.")
@@ -469,69 +497,64 @@ def pagina_dashboard():
 
         st.markdown("##")
 
-        # ---------------------------
-        # GRÁFICOS SOLICITADOS
-        # ---------------------------
-        
-        # LINHA 1: SAC (Portal e Motivo CRM)
-        st.subheader("🎧 Análise SAC")
+        # GRÁFICOS
         c1, c2 = st.columns(2)
         
-        df_sac_dash = df_filtrado[df_filtrado["Setor"] == "SAC"]
-        
         with c1:
-            if not df_sac_dash.empty:
-                # Atendimentos por Portal
-                contagem = df_sac_dash['Portal'].value_counts().reset_index()
+            st.subheader("📊 Atendimentos por Portal")
+            df_portal = df_filtrado[df_filtrado["Portal"].notna() & (df_filtrado["Portal"] != "-")]
+            if not df_portal.empty:
+                contagem = df_portal['Portal'].value_counts().reset_index()
                 contagem.columns = ['Portal', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Portal', orientation='h', text='Quantidade', 
-                             title="Atendimentos por Portal",
                              color_discrete_sequence=['#8b5cf6'])
+                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("Sem dados de SAC para Portais.")
+                st.info("Sem dados de Portal.")
 
         with c2:
-            if not df_sac_dash.empty:
-                # Motivo CRM
-                contagem = df_sac_dash['Motivo_CRM'].value_counts().reset_index()
+            st.subheader("📊 Motivos CRM")
+            df_crm = df_filtrado[df_filtrado["Motivo_CRM"].notna() & (df_filtrado["Motivo_CRM"] != "-")]
+            if not df_crm.empty:
+                contagem = df_crm['Motivo_CRM'].value_counts().reset_index()
                 contagem.columns = ['Motivo CRM', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Motivo CRM', orientation='h', text='Quantidade', 
-                             title="Motivo CRM",
                              color_discrete_sequence=['#f43f5e'])
+                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("Sem dados de SAC para CRM.")
+                st.info("Sem dados de CRM.")
 
+        # Gráficos Pendência/Transportadora
         st.markdown("---")
+        st.subheader("🚚 Análise de Pendências Logísticas")
+        c_pend1, c_pend2 = st.columns(2)
         
-        # LINHA 2: PENDÊNCIA (Transportadora x Motivo e Motivos Gerais)
-        st.subheader("🚚 Análise Pendências")
-        c3, c4 = st.columns(2)
+        df_pend = df_filtrado[df_filtrado["Setor"] == "Pendência"]
         
-        df_pend_dash = df_filtrado[df_filtrado["Setor"] == "Pendência"]
-        
-        with c3:
-            if not df_pend_dash.empty:
-                # Transportadora com Tipo de Motivo (Gráfico Empilhado)
-                fig = px.histogram(df_pend_dash, x="Transportadora", color="Motivo", 
-                                   title="Transportadora x Tipo de Motivo",
-                                   barmode='stack')
+        with c_pend1:
+            if not df_pend.empty:
+                contagem = df_pend['Transportadora'].value_counts().reset_index()
+                contagem.columns = ['Transportadora', 'Quantidade']
+                fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
+                             x='Quantidade', y='Transportadora', orientation='h', text='Quantidade', 
+                             color_discrete_sequence=['#f59e0b'])
+                fig.update_layout(title="Top Transportadoras (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("Sem dados de Pendências.")
+                st.info("Sem dados de Transportadora.")
 
-        with c4:
-            if not df_pend_dash.empty:
-                # Motivos Pendência (Geral)
-                contagem = df_pend_dash['Motivo'].value_counts().reset_index()
+        with c_pend2:
+            if not df_pend.empty:
+                contagem = df_pend['Motivo'].value_counts().reset_index()
                 contagem.columns = ['Motivo', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Motivo', orientation='h', text='Quantidade', 
-                             title="Motivos Pendência",
                              color_discrete_sequence=['#0ea5e9'])
+                fig.update_layout(title="Top Motivos (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sem dados de Pendências.")
