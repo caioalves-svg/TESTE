@@ -64,20 +64,13 @@ modelos_pendencias = {
     "Reenvio de Produto": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
-# NOVAS MENSAGENS ADICIONADAS AQUI
 modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
     "ENVIO DE NF": """Olá, (Nome do cliente)!\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
-    # NOVAS MENSAGENS --->
     "ENVIO DE 2° VIA NF": """Olá, (Nome do cliente)\n\nSegue em anexo a segunda via da nota fiscal solicitada.\nFico à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "CANCELAMENTO": """Olá, (Nome do cliente)\n\nRecebemos sua solicitação de cancelamento e lamentamos que tenha decidido não permanecer com a compra.\nGostaríamos de entender melhor o motivo da sua decisão antes de iniciarmos o processo de cancelamento.\nSeu feedback é essencial para que possamos melhorar continuamente nossos produtos e serviços.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "COMPROVANTE DE ENTREGA": """Olá, (Nome do cliente)\n\nSolicitamos, junto à transportadora responsável, o comprovante de entrega devidamente assinado para conferência, visto que não há reconhecimento do recebimento.\nPermanecemos no aguardo.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    # <--- FIM NOVAS MENSAGENS
-    
     "AGRADECIMENTO": """Olá, (Nome do cliente)!\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -126,10 +119,10 @@ def obter_data_hora_brasil():
 
 def inicializar_banco():
     if not os.path.exists(ARQUIVO_DADOS):
-        df = pd.DataFrame(columns=["Data", "Hora", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Motivo_CRM", "Transportadora"])
+        df = pd.DataFrame(columns=["Data", "Hora", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
         df.to_csv(ARQUIVO_DADOS, index=False, sep=';', encoding='utf-8-sig')
 
-def salvar_registro(setor, colaborador, motivo, portal, nf, motivo_crm, transportadora="-"):
+def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
     inicializar_banco()
     agora = obter_data_hora_brasil()
     
@@ -141,6 +134,7 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, motivo_crm, transpor
         "Motivo": motivo,
         "Portal": portal,
         "Nota_Fiscal": nf,
+        "Numero_Pedido": numero_pedido,
         "Motivo_CRM": motivo_crm,
         "Transportadora": transportadora
     }
@@ -162,9 +156,6 @@ def carregar_dados():
 def converter_para_excel_csv(df):
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
-# ==========================================
-#      MÁGICA DE CÓPIA (JS)
-# ==========================================
 def copiar_para_clipboard(texto):
     texto_json = json.dumps(texto)
     js = f"""
@@ -178,9 +169,7 @@ def copiar_para_clipboard(texto):
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        try {{
-            document.execCommand('copy');
-        }} catch (err) {{}}
+        try {{ document.execCommand('copy'); }} catch (err) {{}}
         document.body.removeChild(textArea);
     }}
     copyToClipboard();
@@ -247,11 +236,13 @@ def pagina_pendencias():
     with col1:
         st.subheader("1. Configuração")
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
-        # NOVO CAMPO: Nome do Cliente
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
-        # CAMPOS PARA BANCO DE DADOS (OCULTOS NA MENSAGEM)
+        
+        # CAMPOS PARA BANCO DE DADOS
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
+        numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_p")
+        motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_p")
         
         transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
         
@@ -263,17 +254,27 @@ def pagina_pendencias():
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
         
-        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        # LÓGICA DE TEXTO PARA PENDÊNCIA (Adiciona frase do Pedido automaticamente)
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
-        texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_cliente_str)
+        texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_cliente_str)
+        
+        ped_str = numero_pedido if numero_pedido else "..."
+        frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+        
+        # Inserção da frase de Pedido (Igual ao SAC)
+        if "\n" in texto_base:
+            partes = texto_base.split("\n", 1)
+            texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+        else:
+            texto_final = f"{frase_pedido}\n\n{texto_base}"
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
         
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
-            # Salva Portal e NF no banco
-            salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, "-", transp)
+            # Salva Portal, NF, Pedido e Motivo CRM no banco
+            salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp)
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
             st.code(texto_final, language="text")
@@ -293,18 +294,17 @@ def pagina_sac():
         st.subheader("1. Configuração Obrigatória")
         
         colab = st.selectbox("👤 Colaborador:", colaboradores_sac, key="colab_s")
-        # NOVO CAMPO: Nome do Cliente
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_s")
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_s")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_s")
+        numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_s")
         motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_s")
         
         st.markdown("---")
         
-        # Motivo do Contato em MAIÚSCULO
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos (Verifica substring em maiúsculo para compatibilidade)
+        # Campos Dinâmicos
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
@@ -363,26 +363,28 @@ def pagina_sac():
         else:
             texto_base = modelos_sac.get(opcao, "")
 
-        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        # Nome do Cliente
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
 
-        # Regra Via Varejo (Sobrescreve a saudação se necessário)
+        # Regra Via Varejo
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
             texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
             texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
-        # Regra Frase NF Global (EXCEÇÃO: Adicionado AGRADECIMENTO)
+        # Regra Frase Pedido (EXCEÇÃO: Adicionado AGRADECIMENTO)
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
         
         if opcao not in excecoes_nf:
-            frase_nf = f"O atendimento é referente sua NOTA FISCAL DE NÚMERO {nota_fiscal}..."
+            ped_str = numero_pedido if numero_pedido else "..."
+            frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+            
             if "\n" in texto_base:
                 partes = texto_base.split("\n", 1)
-                texto_final = f"{partes[0]}\n\n{frase_nf}\n{partes[1]}"
+                texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
             else:
-                texto_final = f"{frase_nf}\n\n{texto_base}"
+                texto_final = f"{frase_pedido}\n\n{texto_base}"
         else:
             texto_final = texto_base
 
@@ -407,7 +409,7 @@ def pagina_sac():
             transp_usada = dados["{transportadora}"]
             
         if st.button("✅ Registrar e Copiar", key="btn_save_sac"):
-            salvar_registro("SAC", colab, opcao, portal, nota_fiscal, motivo_crm, transp_usada)
+            salvar_registro("SAC", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp_usada)
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
             st.code(texto_final, language="text")
