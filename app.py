@@ -16,13 +16,17 @@ st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layo
 ARQUIVO_DADOS = "historico_atendimentos.csv"
 
 # ==========================================
-#      DADOS E LISTAS
+#      DADOS E LISTAS (REFERENCE DATA)
 # ==========================================
+
+# Colaboradores
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla"])
 colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia"])
 
+# Transportadoras
 lista_transportadoras = sorted(["4ELOS", "ATUAL", "BRASIL WEB", "FAVORITA", "FRONTLOG", "GENEROSO", "JADLOG", "LOGAN", "MMA", "PAJUÇARA", "PATRUS", "REBOUÇAS", "REDE SUL", "RIO EXPRESS", "TJB", "TOTAL", "TRILOG"])
 
+# Portais
 lista_portais = sorted([
     "ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA",
     "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA",
@@ -32,6 +36,7 @@ lista_portais = sorted([
     "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"
 ])
 
+# Motivos CRM
 lista_motivo_crm = sorted([
     "ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA",
     "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO",
@@ -63,7 +68,6 @@ modelos_pendencias = {
     "Reenvio de Produto": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
-# Modelo SAC com "Olá, (Nome do cliente)!"
 modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
@@ -192,8 +196,6 @@ st.markdown("""
     
     h1, h2, h3 { color: #0f172a !important; font-weight: 700; }
 
-    /* REMOVIDO CSS-CARD para acabar com o bug dos blocos fantasmas */
-
     .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stDateInput input, .stTextArea textarea {
         background-color: #ffffff !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; color: #1e293b !important;
     }
@@ -239,6 +241,8 @@ def pagina_pendencias():
     with col1:
         st.subheader("1. Configuração")
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
+        # NOVO CAMPO: Nome do Cliente
+        nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
         transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
         
         st.markdown("---")
@@ -248,7 +252,10 @@ def pagina_pendencias():
     with col2:
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
-        texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab)
+        
+        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        nome_cliente_str = nome_cliente if nome_cliente else "Cliente"
+        texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab).replace("(Nome do cliente)", nome_cliente_str)
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
         
@@ -276,6 +283,8 @@ def pagina_sac():
         st.subheader("1. Configuração Obrigatória")
         
         colab = st.selectbox("👤 Colaborador:", colaboradores_sac, key="colab_s")
+        # NOVO CAMPO: Nome do Cliente
+        nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_s")
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_s")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_s")
         motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_s")
@@ -344,10 +353,14 @@ def pagina_sac():
         else:
             texto_base = modelos_sac.get(opcao, "")
 
-        # Regra Via Varejo
+        # SUBSTITUIÇÃO DO NOME DO CLIENTE
+        nome_cliente_str = nome_cliente if nome_cliente else "Cliente"
+        texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
+
+        # Regra Via Varejo (Sobrescreve a saudação se necessário)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-            texto_base = texto_base.replace("Olá, (Nome do cliente)!", "Prezado(os),")
-            texto_base = texto_base.replace("Olá, (Nome do cliente)", "Prezado(os),")
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
+            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
         # Regra Frase NF Global (EXCEÇÃO: Adicionado AGRADECIMENTO)
