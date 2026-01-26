@@ -48,7 +48,7 @@ lista_motivo_crm = sorted([
 
 # ==========================================
 #      SCRIPTS (MENSAGENS PENDÊNCIAS)
-#      AGORA COM TÍTULOS EM MAIÚSCULO
+#      (EM MAIÚSCULO CONFORME SOLICITADO)
 # ==========================================
 modelos_pendencias = {
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
@@ -182,27 +182,62 @@ def copiar_para_clipboard(texto):
     components.html(js, height=0, width=0)
 
 # ==========================================
-#      DESIGN CLEAN (SIDEBAR BRANCA)
+#      DESIGN CLEAN (FORÇANDO MODO CLARO)
 # ==========================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     
-    .stApp { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+    /* Força Fundo Claro */
+    .stApp { background-color: #f8fafc !important; font-family: 'Inter', sans-serif; }
     
+    /* Força Sidebar Branca */
     section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
-    section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] div { color: #334155 !important; }
     
-    h1, h2, h3 { color: #0f172a !important; font-weight: 700; }
-
-    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stDateInput input, .stTextArea textarea {
-        background-color: #ffffff !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; color: #1e293b !important;
+    /* Força Texto Escuro (Anti-Dark Mode) */
+    .stApp, .stApp * {
+        color: #334155 !important;
     }
     
-    .preview-box { background-color: #f1f5f9; border-left: 5px solid #3b82f6; border-radius: 4px; padding: 20px; color: #334155; white-space: pre-wrap; margin-top: 10px; font-size: 14px; }
+    /* Títulos Escuros */
+    h1, h2, h3, h4, h5, h6 { color: #0f172a !important; font-weight: 700; }
 
+    /* Inputs (Caixas de Texto e Select) */
+    .stSelectbox div[data-baseweb="select"] > div, 
+    .stTextInput input, 
+    .stDateInput input, 
+    .stTextArea textarea {
+        background-color: #ffffff !important; 
+        border: 1px solid #94a3b8 !important; 
+        border-radius: 8px !important; 
+        color: #1e293b !important;
+    }
+    
+    /* Placeholders dos inputs */
+    ::placeholder { color: #94a3b8 !important; opacity: 1; }
+
+    /* Caixa de Preview da Mensagem */
+    .preview-box { 
+        background-color: #f1f5f9 !important; 
+        border-left: 5px solid #3b82f6; 
+        border-radius: 4px; 
+        padding: 20px; 
+        color: #334155 !important; 
+        white-space: pre-wrap; 
+        margin-top: 10px; 
+        font-size: 14px; 
+    }
+
+    /* Botões */
     .botao-registrar .stButton button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: white !important; border: none; padding: 0.8rem 2rem; border-radius: 8px; font-weight: 600; width: 100%; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; 
+        color: white !important; 
+        border: none; 
+        padding: 0.8rem 2rem; 
+        border-radius: 8px; 
+        font-weight: 600; 
+        width: 100%; 
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
     }
     .botao-registrar .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 8px rgba(16, 185, 129, 0.3); }
 
@@ -308,7 +343,7 @@ def pagina_sac():
         
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos
+        # Campos Dinâmicos (Verifica substring em maiúsculo para compatibilidade)
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
