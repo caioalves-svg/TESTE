@@ -1,0 +1,117 @@
+/* --- style.css --- */
+
+/* 1. IMPORTANDO FONTE MODERNA (INTER) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* RESET GERAL */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    color: #1e293b; /* Cinza escuro elegante */
+}
+
+/* 2. FUNDO DA PÁGINA */
+.stApp {
+    background-color: #f1f5f9; /* Cinza Gelo */
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-size: 20px 20px; /* Textura sutil de pontos */
+}
+
+/* 3. BARRA LATERAL (SIDEBAR) */
+section[data-testid="stSidebar"] {
+    background-color: #0f172a; /* Azul Noturno (Dark Mode na lateral) */
+    border-right: 1px solid #1e293b;
+}
+
+section[data-testid="stSidebar"] h1, 
+section[data-testid="stSidebar"] h2, 
+section[data-testid="stSidebar"] h3, 
+section[data-testid="stSidebar"] span, 
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] label {
+    color: #f8fafc !important; /* Texto branco na sidebar */
+}
+
+/* 4. TÍTULOS PRINCIPAIS */
+h1 {
+    color: #1e40af; /* Azul Royal Profissional */
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    font-size: 2.5rem;
+}
+
+h2, h3 {
+    color: #334155;
+    font-weight: 600;
+}
+
+/* 5. INPUTS (CAIXAS DE SELEÇÃO E TEXTO) */
+/* Deixa os inputs com cara de "Cartão" branco com sombra */
+.stSelectbox, .stTextArea {
+    margin-bottom: 1rem;
+}
+
+.stSelectbox div[data-baseweb="select"] > div {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px; /* Borda bem arredondada */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.stTextArea textarea {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    font-size: 16px;
+    padding: 15px;
+}
+
+/* Efeito de foco (quando clica para digitar) */
+.stSelectbox div[data-baseweb="select"] > div:focus-within,
+.stTextArea textarea:focus {
+    border-color: #3b82f6; /* Azul brilhante */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* 6. BOTÕES (O Destaque) */
+.stButton button {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); /* Gradiente Azul */
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stButton button:hover {
+    transform: translateY(-3px) scale(1.02); /* Sobe e cresce um pouquinho */
+    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.4);
+}
+
+.stButton button:active {
+    transform: translateY(0);
+}
+
+/* 7. MENSAGENS DE SUCESSO */
+div[data-baseweb="notification"] {
+    background-color: #dcfce7;
+    border: 1px solid #86efac;
+    color: #14532d;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* 8. LABEL DOS CAMPOS */
+label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
