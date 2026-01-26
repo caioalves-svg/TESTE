@@ -16,17 +16,13 @@ st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layo
 ARQUIVO_DADOS = "historico_atendimentos.csv"
 
 # ==========================================
-#      DADOS E LISTAS (REFERENCE DATA)
+#      DADOS E LISTAS
 # ==========================================
-
-# Colaboradores
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla"])
 colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia"])
 
-# Transportadoras
 lista_transportadoras = sorted(["4ELOS", "ATUAL", "BRASIL WEB", "FAVORITA", "FRONTLOG", "GENEROSO", "JADLOG", "LOGAN", "MMA", "PAJUÇARA", "PATRUS", "REBOUÇAS", "REDE SUL", "RIO EXPRESS", "TJB", "TOTAL", "TRILOG"])
 
-# Portais
 lista_portais = sorted([
     "ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA",
     "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA",
@@ -36,7 +32,6 @@ lista_portais = sorted([
     "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"
 ])
 
-# Motivos CRM
 lista_motivo_crm = sorted([
     "ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA",
     "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO",
@@ -51,7 +46,7 @@ lista_motivo_crm = sorted([
 ])
 
 # ==========================================
-#      SCRIPTS (MENSAGENS) - NOME DO CLIENTE INCLUÍDO
+#      SCRIPTS (MENSAGENS)
 # ==========================================
 modelos_pendencias = {
     "Ausente": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
@@ -68,11 +63,11 @@ modelos_pendencias = {
     "Reenvio de Produto": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
-# Modelo SAC com chaves em MAIÚSCULO e Nome do Cliente
+# Modelo SAC com "Olá, (Nome do cliente)!"
 modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
-    "ENVIO DE NF": """Olá, (Nome do cliente)\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    "ENVIO DE NF": """Olá, (Nome do cliente)!\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO": """Olá, (Nome do cliente)!\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -197,7 +192,7 @@ st.markdown("""
     
     h1, h2, h3 { color: #0f172a !important; font-weight: 700; }
 
-    .css-card { background-color: #ffffff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; margin-bottom: 1rem; }
+    /* REMOVIDO CSS-CARD para acabar com o bug dos blocos fantasmas */
 
     .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stDateInput input, .stTextArea textarea {
         background-color: #ffffff !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; color: #1e293b !important;
@@ -242,7 +237,6 @@ def pagina_pendencias():
     col1, col2 = st.columns([1, 1.5], gap="medium")
     
     with col1:
-        st.markdown('<div class="css-card">', unsafe_allow_html=True)
         st.subheader("1. Configuração")
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
         transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
@@ -250,10 +244,8 @@ def pagina_pendencias():
         st.markdown("---")
         st.subheader("2. Motivo")
         opcao = st.selectbox("Selecione o caso:", list(modelos_pendencias.keys()), key="msg_p")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="css-card">', unsafe_allow_html=True)
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
         texto_final = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", colab)
@@ -263,11 +255,11 @@ def pagina_pendencias():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
+            # Para Pendências, passamos "-" para os campos de SAC
             salvar_registro("Pendência", colab, opcao, "-", "-", "-", transp)
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
             st.code(texto_final, language="text")
-        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -281,7 +273,6 @@ def pagina_sac():
     dados = {}
     
     with col1:
-        st.markdown('<div class="css-card">', unsafe_allow_html=True)
         st.subheader("1. Configuração Obrigatória")
         
         colab = st.selectbox("👤 Colaborador:", colaboradores_sac, key="colab_s")
@@ -342,10 +333,8 @@ def pagina_sac():
             dados["{estado}"] = st.text_input("Estado:")
             dados["{complemento}"] = st.text_input("Complemento (opcional):", value="")
             dados["{referencia}"] = st.text_input("Ponto de Referência (opcional):", value="")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="css-card">', unsafe_allow_html=True)
         st.subheader("2. Visualização")
         
         if opcao == "OUTROS":
@@ -361,7 +350,7 @@ def pagina_sac():
             texto_base = texto_base.replace("Olá, (Nome do cliente)", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
-        # Regra Frase NF Global (EXCEÇÃO APLICADA AQUI)
+        # Regra Frase NF Global (EXCEÇÃO: Adicionado AGRADECIMENTO)
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
         
         if opcao not in excecoes_nf:
@@ -399,7 +388,6 @@ def pagina_sac():
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
             st.code(texto_final, language="text")
-        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -520,7 +508,7 @@ def pagina_dashboard():
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Transportadora', orientation='h', text='Quantidade', 
                              color_discrete_sequence=['#f59e0b'])
-                fig.update_layout(title="Top Transportadoras", xaxis_title=None, yaxis_title=None, height=400)
+                fig.update_layout(title="Top Transportadoras (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sem dados de Transportadora.")
@@ -532,7 +520,7 @@ def pagina_dashboard():
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Motivo', orientation='h', text='Quantidade', 
                              color_discrete_sequence=['#0ea5e9'])
-                fig.update_layout(title="Top Motivos", xaxis_title=None, yaxis_title=None, height=400)
+                fig.update_layout(title="Top Motivos (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sem dados de Pendências.")
