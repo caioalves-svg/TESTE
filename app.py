@@ -72,6 +72,7 @@ modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
     "ENVIO DE NF": """Olá, (Nome do cliente)\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    "AGRADECIMENTO": """Olá,\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "SOLICITAÇÃO DE COLETA": """Olá,\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n- Por favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\n- A transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: {endereco_resumido}\n- É necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -98,7 +99,6 @@ modelos_sac = {
     "ITEM FALTANTE": """Olá,\n\nSentimos muito pelo ocorrido. Já acionamos o nosso estoque e a expedição para verificar a disponibilidade do item faltante e providenciar o envio separado para você.\n\nRetornaremos com uma posição em breve.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ATRASO NA ENTREGA": """Olá,\n\nLamentamos pelo atraso na entrega do seu pedido. Estamos em contato ativo com a transportadora para entender o motivo e cobramos uma nova previsão de entrega com urgência e prioridade de finalização. Manteremos você informado(a).\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ENTREGA (SERVIÇOS NÃO INCLUSOS)": """Olá,\n\nGostaríamos de esclarecer alguns pontos sobre a entrega: O serviço contratado pela Engage Eletro junto às transportadoras parceiras cobre a entrega do produto até a entrada (porta ou portaria) do endereço indicado. O serviço não inclui: montagem/desmontagem, subida de escadas (se não houver elevador ou se o produto não couber), içamento por guincho ou instalação.\n\nAs entregas ocorrem de segunda a sexta-feira, em horário comercial.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    "AGRADECIMENTO": """Olá,\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "CÓDIGO COLETA DOMICILIAR": """Olá,\n\nSegue abaixo o código para a logística reversa (coleta domiciliar). Para que a coleta seja efetuada com sucesso, o produto deve estar devidamente embalado quando a transportadora chegar.\n\nCódigo de Coleta: {codigo_coleta}\n\nObservações:\n- O processo não gera custos para o cliente.\n- Não é necessário preencher dados de remetente/destinatário na caixa, o código já contém as informações.\n\nAssim que o produto retornar ao nosso Centro de Distribuição, seguiremos com a tratativa solicitada.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "EMBALAGEM SIMILAR": """Olá,\n\nPara garantir que o produto chegue intacto ao nosso centro de distribuição e seu processo seja finalizado sem problemas, reforçamos a importância da embalagem:\n\nRecomendamos envolver o produto em plástico bolha e utilizar uma caixa de papelão resistente (pode ser reutilizada, desde que sem rótulos antigos). Isso evita danos adicionais no transporte.\n\nAgradecemos sua colaboração.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "TERMO PARA TROCA CASADA": """Olá,\n\nPara agilizar o processo e tentar realizar a entrega do novo produto no mesmo momento da coleta do antigo, propomos a formalização de um Termo de Acordo Extrajudicial.\n\nO procedimento é simples:\n- Enviaremos o termo pelo nosso Jurídico.\n- Você deve assinar todas as páginas (conforme seu documento de identificação).\n- Envie o termo assinado + foto do documento (RG ou CNH) em até 48 horas.\n- Após validação jurídica, seguiremos com o envio e coleta simultânea.\n\nPodemos seguir com este procedimento?\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -271,7 +271,7 @@ def pagina_pendencias():
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-#           PÁGINA SAC (ATUALIZADA)
+#           PÁGINA SAC
 # ==========================================
 def pagina_sac():
     st.title("🎧 SAC / Atendimento")
@@ -361,8 +361,8 @@ def pagina_sac():
             texto_base = texto_base.replace("Olá, (Nome do cliente)", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
-        # Regra Frase NF Global (EXCEÇÃO APLICADA AQUI)
-        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
+        # Regra Frase NF Global (EXCEÇÃO: Adicionado AGRADECIMENTO)
+        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
         
         if opcao not in excecoes_nf:
             frase_nf = f"O atendimento é referente sua NOTA FISCAL DE NÚMERO {nota_fiscal}..."
@@ -506,32 +506,36 @@ def pagina_dashboard():
             else:
                 st.info("Sem dados de CRM.")
 
+        # Gráficos Pendência/Transportadora
         st.markdown("---")
-        c3, c4 = st.columns(2)
+        st.subheader("🚚 Análise de Pendências Logísticas")
+        c_pend1, c_pend2 = st.columns(2)
         
-        with c3:
-            st.subheader("Scripts Mais Usados (SAC)")
-            df_sac = df_filtrado[df_filtrado["Setor"] == "SAC"]
-            if not df_sac.empty:
-                contagem = df_sac['Motivo'].value_counts().reset_index()
-                contagem.columns = ['Motivo', 'Quantidade']
+        df_pend = df_filtrado[df_filtrado["Setor"] == "Pendência"]
+        
+        with c_pend1:
+            if not df_pend.empty:
+                contagem = df_pend['Transportadora'].value_counts().reset_index()
+                contagem.columns = ['Transportadora', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
-                             x='Quantidade', y='Motivo', orientation='h', text='Quantidade', 
-                             color_discrete_sequence=['#3b82f6'])
-                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
+                             x='Quantidade', y='Transportadora', orientation='h', text='Quantidade', 
+                             color_discrete_sequence=['#f59e0b'])
+                fig.update_layout(title="Top Transportadoras (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Sem dados de Transportadora.")
 
-        with c4:
-            st.subheader("Scripts Mais Usados (Pendências)")
-            df_pend = df_filtrado[df_filtrado["Setor"] == "Pendência"]
+        with c_pend2:
             if not df_pend.empty:
                 contagem = df_pend['Motivo'].value_counts().reset_index()
                 contagem.columns = ['Motivo', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Motivo', orientation='h', text='Quantidade', 
                              color_discrete_sequence=['#0ea5e9'])
-                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
+                fig.update_layout(title="Top Motivos (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Sem dados de Pendências.")
 
         st.markdown("---")
         st.subheader("📋 Detalhamento Geral")
