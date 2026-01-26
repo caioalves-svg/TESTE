@@ -50,6 +50,7 @@ lista_motivo_crm = sorted([
 #      SCRIPTS (MENSAGENS PENDÊNCIAS)
 # ==========================================
 modelos_pendencias = {
+    "ATENDIMENTO DIGISAC": "", # Sem mensagem, apenas para registro
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
@@ -311,15 +312,18 @@ def pagina_pendencias():
             texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
             texto_base = texto_base.replace("Olá,", "Prezado(os),")
 
-        # 5. Inserção da Frase do Pedido
-        ped_str = numero_pedido if numero_pedido else "..."
-        frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
-        
-        if "\n" in texto_base:
-            partes = texto_base.split("\n", 1)
-            texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+        # 5. Inserção da Frase do Pedido (Exceção para ATENDIMENTO DIGISAC que é vazio)
+        if opcao != "ATENDIMENTO DIGISAC":
+            ped_str = numero_pedido if numero_pedido else "..."
+            frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+            
+            if "\n" in texto_base:
+                partes = texto_base.split("\n", 1)
+                texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+            else:
+                texto_final = f"{frase_pedido}\n\n{texto_base}"
         else:
-            texto_final = f"{frase_pedido}\n\n{texto_base}"
+            texto_final = "" # Digisac fica vazio
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
         
