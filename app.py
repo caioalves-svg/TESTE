@@ -171,6 +171,7 @@ modelos_pendencias = {
 # ==========================================
 modelos_sac = {
     "OUTROS": "", 
+    "RECLAME AQUI": "",  # <--- NOVA OPÇÃO ADICIONADA AQUI
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
     "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
@@ -452,8 +453,13 @@ def pagina_sac():
     with col2:
         st.subheader("2. Visualização")
         
-        if opcao == "OUTROS":
-            texto_base = st.text_area("Digite a mensagem personalizada:", height=200)
+        # --- AQUI ESTÁ A LÓGICA DO RECLAME AQUI IGUAL AO OUTROS ---
+        if opcao == "OUTROS" or opcao == "RECLAME AQUI":
+            label_texto = "Digite a mensagem personalizada:"
+            if opcao == "RECLAME AQUI":
+                label_texto = "Digite a resposta do Reclame Aqui:"
+                
+            texto_base = st.text_area(label_texto, height=200)
             if texto_base:
                 texto_base += f"\n\nEquipe de atendimento Engage Eletro.\n{{colaborador}}"
         else:
@@ -467,7 +473,7 @@ def pagina_sac():
              texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
 
         # Regra Frase Pedido
-        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
+        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS", "RECLAME AQUI"] # Adicionado RECLAME AQUI na exceção
         scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in excecoes_nf and opcao not in scripts_martins:
