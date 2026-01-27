@@ -42,7 +42,7 @@ lista_motivo_crm = sorted([
     "ENTREGUE E CANCELADO", "ERRO DE CADASTRO", "ERRO DE EXPEDIÇÃO", "ERRO DE INTEGRAÇÃO DE FATURAMENTO",
     "ESTOQUE FALTANTE", "EXTRAVIO", "FALTA DE ETIQUETA ENVIAS", "INSUCESSO NA ENTREGA",
     "ITEM FALTANTE", "MERCADORIA RETIDA", "MUDOU-SE", "NOTA RETIDA", "PAGAMENTO/REEMBOLSO",
-    "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM RASTREIO", "SUSPEITA DE FRAUDE",
+    "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM ABERTURA DE CRM", "SEM RASTREIO", "SUSPEITA DE FRAUDE",
     "TROCA DE ETIQUETA", "ZONA RURAL"
 ])
 
@@ -50,9 +50,9 @@ lista_motivo_crm = sorted([
 #      SCRIPTS (MENSAGENS PENDÊNCIAS)
 # ==========================================
 modelos_pendencias = {
-    "ATENDIMENTO DIGISAC": "", # Sem mensagem
-    "2° TENTATIVA DE CONTATO": "", # Sem mensagem
-    "3° TENTATIVA DE CONTATO": "", # Sem mensagem
+    "ATENDIMENTO DIGISAC": "", 
+    "2° TENTATIVA DE CONTATO": "", 
+    "3° TENTATIVA DE CONTATO": "", 
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
@@ -160,6 +160,9 @@ def carregar_dados():
         return pd.DataFrame()
 
 def converter_para_excel_csv(df):
+    # FORÇA TIPO STRING PARA EVITAR NOTAÇÃO CIENTÍFICA NO EXCEL
+    df['Nota_Fiscal'] = df['Nota_Fiscal'].astype(str)
+    df['Numero_Pedido'] = df['Numero_Pedido'].astype(str)
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
 def copiar_para_clipboard(texto):
@@ -246,6 +249,11 @@ st.markdown("""
     .stDownloadButton button { background-color: #3b82f6 !important; color: white !important; border: none !important; border-radius: 8px; font-weight: 600; width: 100%; }
     .stDownloadButton button:hover { background-color: #2563eb !important; }
     
+    /* Remover espaços em branco vazios */
+    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column;"] > div[data-testid="stVerticalBlock"] {
+        gap: 0rem;
+    }
+    
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -303,19 +311,14 @@ def pagina_pendencias():
         if "AMAZON" in portal:
             assinatura_nome = ""
 
-        # 3. Substituições Iniciais (Transportadora, Colaborador, Nome Cliente)
+        # 3. Substituições Iniciais
         texto_base = texto_cru.replace("{transportadora}", transp)\
                               .replace("{colaborador}", assinatura_nome)\
                               .replace("(Nome do cliente)", nome_cliente_str)
 
-        # 4. Regra Via Varejo (Substitui Saudação)
-        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
-            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
-            texto_base = texto_base.replace("Olá,", "Prezado(os),")
+        # 4. Regra Via Varejo removida (agora usa o padrão Olá)
 
         # 5. Inserção da Frase do Pedido (Exceção para motivos vazios)
-        # Lista de motivos que não devem gerar texto (inclui os novos)
         motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
         
         if opcao not in motivos_sem_texto:
@@ -335,7 +338,6 @@ def pagina_pendencias():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
-            # Salva Portal, NF, Pedido e Motivo CRM no banco
             salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp)
             st.toast("Registrado com sucesso!", icon="✨")
             copiar_para_clipboard(texto_final)
@@ -366,55 +368,54 @@ def pagina_sac():
         
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos (Verifica substring em maiúsculo para compatibilidade)
+        # Campos Dinâmicos - CORREÇÃO DO ERRO DE DUPLICIDADE (ADD KEY)
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
-            dados["{endereco_resumido}"] = st.text_input("Endereço da coleta (Bairro/Cidade):")
+            dados["{endereco_resumido}"] = st.text_input("Endereço da coleta (Bairro/Cidade):", key="end_coleta_sac")
         elif "ASSISTÊNCIA TÉCNICA (DENTRO DOS 7 DIAS)" in op_upper:
             st.info("🔧 Dados da Assistência")
-            dados["{fabricante}"] = st.text_input("Nome da Fabricante:")
-            dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:")
+            dados["{fabricante}"] = st.text_input("Nome da Fabricante:", key="fab_in_7")
+            dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
-            dados["{data_compra}"] = st.text_input("Data da Compra:")
-            dados["{data_compra}"] = st.text_input("Data da Compra:")
-            dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):")
-            dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:")
+            dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
+            dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
+            dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
         elif "CÓDIGO POSTAL" in op_upper or "CÓDIGO COLETA" in op_upper:
             st.info("📮 Código de Postagem")
             k = "{codigo_postagem}" if "CÓDIGO POSTAL" in op_upper else "{codigo_coleta}"
-            dados[k] = st.text_input("Código de Coleta/Postagem:")
+            dados[k] = st.text_input("Código de Coleta/Postagem:", key="cod_post_sac")
         elif "CONFIRMAÇÃO DE ENTREGA" in op_upper:
             st.info("🚚 Dados da Entrega")
-            dados["{transportadora}"] = st.selectbox("Transportadora:", lista_transportadoras, key="tr_ent_sac")
-            dados["{data_entrega}"] = st.text_input("Data da Entrega:")
+            dados["{transportadora}"] = st.selectbox("Transportadora:", lista_transportadoras, key="tr_ent_sac_conf")
+            dados["{data_entrega}"] = st.text_input("Data da Entrega:", key="data_ent_sac")
         elif "CONVERSÃO GLP" in op_upper:
             st.info("🔥 Dados do Fabricante")
-            dados["{fabricante}"] = st.text_input("Nome do Fabricante:")
-            dados["{site_fabricante}"] = st.text_input("Site/Contato:")
+            dados["{fabricante}"] = st.text_input("Nome do Fabricante:", key="fab_glp")
+            dados["{site_fabricante}"] = st.text_input("Site/Contato:", key="site_glp")
         elif "OFERECER DESCONTO" in op_upper:
             st.info("💰 Proposta de Valor")
-            dados["{valor_desconto}"] = st.text_input("Valor do reembolso (R$):")
+            dados["{valor_desconto}"] = st.text_input("Valor do reembolso (R$):", key="val_desc")
         elif "MERCADORIA EM TRÂNSITO" in op_upper:
             st.info("📦 Rastreamento")
-            dados["{previsao_entrega}"] = st.text_input("Previsão de Entrega:")
-            dados["{link_rastreio}"] = st.text_input("Link de Rastreio:")
-            dados["{nota_fiscal}"] = st.text_input("Nota Fiscal:")
+            dados["{previsao_entrega}"] = st.text_input("Previsão de Entrega:", key="prev_ent")
+            dados["{link_rastreio}"] = st.text_input("Link de Rastreio:", key="link_rast")
+            dados["{nota_fiscal}"] = st.text_input("Nota Fiscal:", key="nf_rast")
             dados["{transportadora}"] = st.selectbox("Transportadora:", lista_transportadoras, key="tr_trans_sac")
         elif "FISCALIZAÇÃO" in op_upper:
             st.info("🛑 Fiscalização")
             dados["{transportadora}"] = st.selectbox("Transportadora:", lista_transportadoras, key="tr_fisc_sac")
         elif "INSUCESSO NA ENTREGA" in op_upper:
             st.info("🏠 Endereço para Confirmar")
-            dados["{rua}"] = st.text_input("Rua:")
-            dados["{cep}"] = st.text_input("CEP:")
-            dados["{numero}"] = st.text_input("Número:")
-            dados["{bairro}"] = st.text_input("Bairro:")
-            dados["{cidade}"] = st.text_input("Cidade:")
-            dados["{estado}"] = st.text_input("Estado:")
-            dados["{complemento}"] = st.text_input("Complemento (opcional):", value="")
-            dados["{referencia}"] = st.text_input("Ponto de Referência (opcional):", value="")
+            dados["{rua}"] = st.text_input("Rua:", key="rua_ins")
+            dados["{cep}"] = st.text_input("CEP:", key="cep_ins")
+            dados["{numero}"] = st.text_input("Número:", key="num_ins")
+            dados["{bairro}"] = st.text_input("Bairro:", key="bair_ins")
+            dados["{cidade}"] = st.text_input("Cidade:", key="cid_ins")
+            dados["{estado}"] = st.text_input("Estado:", key="uf_ins")
+            dados["{complemento}"] = st.text_input("Complemento (opcional):", value="", key="comp_ins")
+            dados["{referencia}"] = st.text_input("Ponto de Referência (opcional):", value="", key="ref_ins")
 
     with col2:
         st.subheader("2. Visualização")
@@ -430,13 +431,9 @@ def pagina_sac():
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
 
-        # Regra Via Varejo
-        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}!", "Prezado(os),")
-            texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", "Prezado(os),")
-            texto_base = texto_base.replace("Olá,", "Prezado(os),")
+        # Regra Via Varejo removida (agora usa o padrão)
 
-        # Regra Frase Pedido (EXCEÇÃO: Adicionado AGRADECIMENTO)
+        # Regra Frase Pedido
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
         
         if opcao not in excecoes_nf:
@@ -602,12 +599,10 @@ def pagina_dashboard():
         
         with c_pend1:
             if not df_pend.empty:
-                contagem = df_pend['Transportadora'].value_counts().reset_index()
-                contagem.columns = ['Transportadora', 'Quantidade']
-                fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
-                             x='Quantidade', y='Transportadora', orientation='h', text='Quantidade', 
-                             color_discrete_sequence=['#f59e0b'])
-                fig.update_layout(title="Top Transportadoras (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
+                # CORREÇÃO: Gráfico Stacked para contar motivos por transportadora
+                fig = px.histogram(df_pend, x="Transportadora", color="Motivo", 
+                                   title="Transportadora x Tipo de Motivo",
+                                   barmode='stack')
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sem dados de Transportadora.")
