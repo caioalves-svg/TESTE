@@ -15,7 +15,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      CONEXÃO GOOGLE SHEETS (HÍBRIDA & SEGURA)
+#      CONEXÃO GOOGLE SHEETS (CORREÇÃO DE JWT)
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
@@ -32,6 +32,12 @@ def conectar_google_sheets():
     if "gcp_service_account" in st.secrets:
         try:
             creds_dict = dict(st.secrets["gcp_service_account"])
+            
+            # --- CORREÇÃO CRÍTICA DO JWT ---
+            # Substitui quebras de linha literais por reais para o Google aceitar a chave
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         except Exception as e:
             st.warning(f"Erro ao ler Secrets: {e}")
@@ -42,10 +48,6 @@ def conectar_google_sheets():
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         else:
             st.error("🚨 ERRO DE CONEXÃO: Credenciais não encontradas.")
-            st.info("Passo a Passo para corrigir no Streamlit Cloud:")
-            st.markdown("1. Vá no painel do seu App no Streamlit.")
-            st.markdown("2. Clique em 'Settings' > 'Secrets'.")
-            st.markdown("3. Cole o conteúdo do JSON lá (veja o formato abaixo do código).")
             return None
 
     # Conectar
@@ -108,7 +110,6 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
 def converter_para_excel_csv(df):
     """Converte DF para CSV forçando colunas numéricas a serem texto."""
     df_export = df.copy()
-    # Adiciona um caractere invisível ou força string para o Excel não comer o número
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
     return df_export.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
@@ -151,9 +152,6 @@ modelos_pendencias = {
     "ATENDIMENTO DIGISAC": "", 
     "2° TENTATIVA DE CONTATO": "", 
     "3° TENTATIVA DE CONTATO": "",
-    "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
-    "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
-    "CANCELAMENTO MARTINS (PREÇO)": """Olá, {nome_cliente}!\n\nIdentificamos uma divergência no valor do produto devido a um erro técnico na transmissão de nossa tabela de precificação. Em razão disso, solicitamos o cancelamento do pedido para que possamos regularizar a situação.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
@@ -174,6 +172,9 @@ modelos_pendencias = {
 modelos_sac = {
     "OUTROS": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
+    "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
+    "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
+    "CANCELAMENTO MARTINS (PREÇO)": """Olá, {nome_cliente}!\n\nIdentificamos uma divergência no valor do produto devido a um erro técnico na transmissão de nossa tabela de precificação. Em razão disso, solicitamos o cancelamento do pedido para que possamos regularizar a situação.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "ENVIO DE NF": """Olá, (Nome do cliente)!\n\nSegue anexo a sua nota fiscal,\n\nFicamos à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ENVIO DE 2° VIA NF": """Olá, (Nome do cliente)\n\nSegue em anexo a segunda via da nota fiscal solicitada.\nFico à disposição para qualquer esclarecimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "CANCELAMENTO": """Olá, (Nome do cliente)\n\nRecebemos sua solicitação de cancelamento e lamentamos que tenha decidido não permanecer com a compra.\nGostaríamos de entender melhor o motivo da sua decisão antes de iniciarmos o processo de cancelamento.\nSeu feedback é essencial para que possamos melhorar continuamente nossos produtos e serviços.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -349,20 +350,16 @@ def pagina_pendencias():
              pass 
 
         motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
-        scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in motivos_sem_texto:
-            if opcao in scripts_martins:
-                texto_final = texto_base
+            ped_str = numero_pedido if numero_pedido else "..."
+            frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+            
+            if "\n" in texto_base:
+                partes = texto_base.split("\n", 1)
+                texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
             else:
-                ped_str = numero_pedido if numero_pedido else "..."
-                frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
-                
-                if "\n" in texto_base:
-                    partes = texto_base.split("\n", 1)
-                    texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
-                else:
-                    texto_final = f"{frase_pedido}\n\n{texto_base}"
+                texto_final = f"{frase_pedido}\n\n{texto_base}"
         else:
             texto_final = ""
         
@@ -413,7 +410,6 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
-            # --- Correção do ID Duplicado Aqui ---
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
@@ -471,8 +467,10 @@ def pagina_sac():
 
         # Regra Frase Pedido
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
+        scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
-        if opcao not in excecoes_nf:
+        # Não adiciona frase de pedido se for um script do Martins (pois já tem formato próprio)
+        if opcao not in excecoes_nf and opcao not in scripts_martins:
             ped_str = numero_pedido if numero_pedido else "..."
             frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
             
@@ -481,6 +479,9 @@ def pagina_sac():
                 texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
             else:
                 texto_final = f"{frase_pedido}\n\n{texto_base}"
+        elif opcao in scripts_martins:
+            # Substituição específica para os scripts Martins
+            texto_final = texto_base.replace("{nome_cliente}", nome_cliente_str)
         else:
             texto_final = texto_base
 
