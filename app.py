@@ -45,7 +45,7 @@ def conectar_google_sheets():
             st.info("Passo a Passo para corrigir no Streamlit Cloud:")
             st.markdown("1. Vá no painel do seu App no Streamlit.")
             st.markdown("2. Clique em 'Settings' > 'Secrets'.")
-            st.markdown("3. Cole o conteúdo do seu JSON lá (veja o formato abaixo do código).")
+            st.markdown("3. Cole o conteúdo do JSON lá (veja o formato abaixo do código).")
             return None
 
     # Conectar
@@ -413,6 +413,7 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
+            # --- Correção do ID Duplicado Aqui ---
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
@@ -595,6 +596,7 @@ def pagina_dashboard():
         with c3:
             st.subheader("🚚 Transportadoras (Detalhado)")
             if not df_pend_dash.empty:
+                # CORREÇÃO: Gráfico Stacked + Text Auto para mostrar números dentro das barras
                 fig = px.histogram(df_pend_dash, x="Transportadora", color="Motivo", 
                                    title="Ocorrências por Transportadora",
                                    barmode='stack', text_auto=True)
@@ -619,7 +621,7 @@ def pagina_dashboard():
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
         
-        # Botão de Download
+        # Botão de Download com a correção de formato TEXTO
         csv = converter_para_excel_csv(df_filtrado)
         st.download_button(
             label="Baixar Dados Filtrados (.csv)",
