@@ -4,16 +4,78 @@ import plotly.express as px
 import os
 import pytz
 import json
-import streamlit.components.v1 as components
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import streamlit.components.v1 as components
 
 # ==========================================
 #      CONFIGURAÇÃO INICIAL
 # ==========================================
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
-# Nome do arquivo de dados
-ARQUIVO_DADOS = "historico_atendimentos.csv"
+# ==========================================
+#      CONEXÃO GOOGLE SHEETS
+# ==========================================
+# Nome da sua planilha no Google Sheets (Deve ser exato)
+NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
+
+def conectar_google_sheets():
+    """Conecta ao Google Sheets usando credenciais locais."""
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    
+    # Verifica se o arquivo de credenciais existe
+    if not os.path.exists("credentials.json"):
+        st.error("⚠️ Arquivo 'credentials.json' não encontrado! Configure as credenciais do Google Cloud.")
+        return None
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+    client = gspread.authorize(creds)
+    
+    try:
+        sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
+        return sheet
+    except gspread.SpreadsheetNotFound:
+        st.error(f"⚠️ Planilha '{NOME_PLANILHA_GOOGLE}' não encontrada. Verifique o nome e o compartilhamento.")
+        return None
+
+def carregar_dados():
+    """Lê os dados diretamente do Google Sheets."""
+    sheet = conectar_google_sheets()
+    if sheet:
+        dados = sheet.get_all_records()
+        if dados:
+            return pd.DataFrame(dados)
+        else:
+            # Retorna estrutura vazia se a planilha estiver em branco
+            return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
+    return pd.DataFrame()
+
+def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
+    """Salva uma nova linha no Google Sheets."""
+    sheet = conectar_google_sheets()
+    if sheet:
+        agora = obter_data_hora_brasil()
+        nova_linha = [
+            agora.strftime("%d/%m/%Y"),      # Data
+            agora.strftime("%H:%M:%S"),      # Hora
+            agora.strftime("%A"),            # Dia da Semana (Para o Dashboard)
+            setor,
+            colaborador,
+            motivo,
+            portal,
+            str(nf),                         # Força texto para não quebrar no Excel
+            str(numero_pedido),              # Força texto
+            motivo_crm,
+            transportadora
+        ]
+        try:
+            sheet.append_row(nova_linha)
+            return True
+        except Exception as e:
+            st.error(f"Erro ao gravar no Google Sheets: {e}")
+            return False
+    return False
 
 # ==========================================
 #      DADOS E LISTAS (REFERENCE DATA)
@@ -50,9 +112,19 @@ lista_motivo_crm = sorted([
 #      SCRIPTS (MENSAGENS PENDÊNCIAS)
 # ==========================================
 modelos_pendencias = {
+    # OPÇÕES SEM TEXTO (APENAS REGISTRO)
     "ATENDIMENTO DIGISAC": "", 
     "2° TENTATIVA DE CONTATO": "", 
-    "3° TENTATIVA DE CONTATO": "", 
+    "3° TENTATIVA DE CONTATO": "",
+    
+    # NOVOS SCRIPTS MARTINS
+    "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
+    
+    "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
+    
+    "CANCELAMENTO MARTINS (PREÇO)": """Olá, {nome_cliente}!\n\nIdentificamos uma divergência no valor do produto devido a um erro técnico na transmissão de nossa tabela de precificação. Em razão disso, solicitamos o cancelamento do pedido para que possamos regularizar a situação.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
+
+    # OUTROS MOTIVOS
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
@@ -122,48 +194,6 @@ lista_motivos_contato.append("OUTROS") # Deixa "OUTROS" no final
 def obter_data_hora_brasil():
     fuso_br = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso_br)
-
-def inicializar_banco():
-    if not os.path.exists(ARQUIVO_DADOS):
-        df = pd.DataFrame(columns=["Data", "Hora", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
-        df.to_csv(ARQUIVO_DADOS, index=False, sep=';', encoding='utf-8-sig')
-
-def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
-    inicializar_banco()
-    agora = obter_data_hora_brasil()
-    
-    nova_linha = {
-        "Data": agora.strftime("%d/%m/%Y"),
-        "Hora": agora.strftime("%H:%M:%S"),
-        "Setor": setor,
-        "Colaborador": colaborador,
-        "Motivo": motivo,
-        "Portal": portal,
-        "Nota_Fiscal": nf,
-        "Numero_Pedido": numero_pedido,
-        "Motivo_CRM": motivo_crm,
-        "Transportadora": transportadora
-    }
-    
-    try:
-        df = pd.read_csv(ARQUIVO_DADOS, sep=';', encoding='utf-8-sig')
-        df = pd.concat([df, pd.DataFrame([nova_linha])], ignore_index=True)
-        df.to_csv(ARQUIVO_DADOS, index=False, sep=';', encoding='utf-8-sig')
-    except Exception as e:
-        st.error(f"Erro ao salvar: {e}. Tente apagar o arquivo .csv antigo.")
-
-def carregar_dados():
-    inicializar_banco()
-    try:
-        return pd.read_csv(ARQUIVO_DADOS, sep=';', encoding='utf-8-sig')
-    except:
-        return pd.DataFrame()
-
-def converter_para_excel_csv(df):
-    # FORÇA TIPO STRING PARA EVITAR NOTAÇÃO CIENTÍFICA NO EXCEL
-    df['Nota_Fiscal'] = df['Nota_Fiscal'].astype(str)
-    df['Numero_Pedido'] = df['Numero_Pedido'].astype(str)
-    return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
 def copiar_para_clipboard(texto):
     texto_json = json.dumps(texto)
@@ -312,24 +342,32 @@ def pagina_pendencias():
             assinatura_nome = ""
 
         # 3. Substituições Iniciais
+        # Para os scripts do Martins que usam {nome_cliente}, fazemos a substituição direta
         texto_base = texto_cru.replace("{transportadora}", transp)\
                               .replace("{colaborador}", assinatura_nome)\
+                              .replace("{nome_cliente}", nome_cliente_str)\
                               .replace("(Nome do cliente)", nome_cliente_str)
 
-        # 4. Regra Via Varejo removida (agora usa o padrão Olá)
+        # 4. Regra Via Varejo - PADRÃO "Olá" MANTIDO (Regra de "Prezado" removida conforme pedido)
 
-        # 5. Inserção da Frase do Pedido (Exceção para motivos vazios)
+        # 5. Inserção da Frase do Pedido (Exceção para motivos vazios ou scripts especiais)
         motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
+        scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in motivos_sem_texto:
-            ped_str = numero_pedido if numero_pedido else "..."
-            frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
-            
-            if "\n" in texto_base:
-                partes = texto_base.split("\n", 1)
-                texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+            if opcao in scripts_martins:
+                # Martins já tem o texto completo formatado, não insere frase de pedido automática no meio
+                texto_final = texto_base
             else:
-                texto_final = f"{frase_pedido}\n\n{texto_base}"
+                # Padrão para os demais
+                ped_str = numero_pedido if numero_pedido else "..."
+                frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+                
+                if "\n" in texto_base:
+                    partes = texto_base.split("\n", 1)
+                    texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+                else:
+                    texto_final = f"{frase_pedido}\n\n{texto_base}"
         else:
             texto_final = "" # Mantém vazio para registro puro
         
@@ -338,10 +376,11 @@ def pagina_pendencias():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
-            salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp)
-            st.toast("Registrado com sucesso!", icon="✨")
-            copiar_para_clipboard(texto_final)
-            st.code(texto_final, language="text")
+            sucesso = salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp)
+            if sucesso:
+                st.toast("Registrado com sucesso na Nuvem! ☁️", icon="✨")
+                copiar_para_clipboard(texto_final)
+                st.code(texto_final, language="text")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -368,7 +407,8 @@ def pagina_sac():
         
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos - CORREÇÃO DO ERRO DE DUPLICIDADE (ADD KEY)
+        # Campos Dinâmicos - CORREÇÃO CRÍTICA DO ERRO 'StreamlitDuplicateElementId'
+        # Adicionadas keys únicas para cada input condicional
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
@@ -379,7 +419,9 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
+            # KEY ÚNICA ADICIONADA AQUI PARA CORRIGIR O ERRO
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
+            # KEY ÚNICA ADICIONADA
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
         elif "CÓDIGO POSTAL" in op_upper or "CÓDIGO COLETA" in op_upper:
@@ -431,7 +473,9 @@ def pagina_sac():
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
 
-        # Regra Via Varejo removida (agora usa o padrão)
+        # Regra Via Varejo ATUALIZADA: Agora usa "Olá"
+        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
+             texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
 
         # Regra Frase Pedido
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
@@ -469,72 +513,41 @@ def pagina_sac():
             transp_usada = dados["{transportadora}"]
             
         if st.button("✅ Registrar e Copiar", key="btn_save_sac"):
-            salvar_registro("SAC", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp_usada)
-            st.toast("Registrado com sucesso!", icon="✨")
-            copiar_para_clipboard(texto_final)
-            st.code(texto_final, language="text")
+            sucesso = salvar_registro("SAC", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp_usada)
+            if sucesso:
+                st.toast("Registrado com sucesso na Nuvem! ☁️", icon="✨")
+                copiar_para_clipboard(texto_final)
+                st.code(texto_final, language="text")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial")
-    st.markdown("Visão estratégica dos atendimentos.")
+    st.title("📊 Dashboard Gerencial (Nuvem)")
+    st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
-    # UPLOAD NA BARRA LATERAL (RESTAURAR BACKUP)
-    st.sidebar.subheader("📂 Carregar Backup")
-    uploaded_file = st.sidebar.file_uploader("Subir arquivo .csv", type="csv")
-    if uploaded_file is not None:
-        try:
-            df_upload = pd.read_csv(uploaded_file, sep=';', encoding='utf-8-sig')
-            df_upload.to_csv(ARQUIVO_DADOS, index=False, sep=';', encoding='utf-8-sig')
-            st.sidebar.success("Dados carregados com sucesso!")
-        except Exception as e:
-            st.sidebar.error(f"Erro ao carregar: {e}")
-
-    if not os.path.exists(ARQUIVO_DADOS):
-        st.warning("Ainda não há dados registrados.")
+    # Verifica arquivo de credenciais
+    if not os.path.exists("credentials.json"):
+        st.error("🚨 Arquivo de credenciais não encontrado. Por favor, adicione o 'credentials.json' na pasta do projeto.")
         return
 
     try:
         df = carregar_dados()
         if df.empty:
-            st.warning("O arquivo de dados está vazio.")
+            st.warning("A planilha do Google Sheets está vazia.")
             return
 
-        # --- SEÇÃO DE EXPORTAÇÃO ---
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("📥 Exportação")
+        # Conversão de Data para ordenação
+        df["Data_Filtro"] = pd.to_datetime(df["Data"], format="%d/%m/%Y", errors='coerce')
         
-        tipo_export = st.sidebar.selectbox("Filtrar planilha por:", ["Geral (Todos)", "Apenas SAC", "Apenas Pendências"])
-        
-        df_export = df.copy()
-        if tipo_export == "Apenas SAC":
-            df_export = df_export[df_export["Setor"] == "SAC"]
-        elif tipo_export == "Apenas Pendências":
-            df_export = df_export[df_export["Setor"] == "Pendência"]
-            
-        csv = converter_para_excel_csv(df_export)
-        
-        nome_arquivo = f'relatorio_{tipo_export.split()[0].lower()}_{datetime.now().strftime("%d-%m-%Y")}.csv'
-        
-        st.sidebar.download_button(
-            label=f"Baixar Planilha ({tipo_export})",
-            data=csv,
-            file_name=nome_arquivo,
-            mime='text/csv',
-        )
-
         # --- FILTROS VISUAIS ---
         st.sidebar.markdown("---")
         st.sidebar.subheader("Filtros do Painel")
         
-        df["Data_Filtro"] = pd.to_datetime(df["Data"], format="%d/%m/%Y", errors='coerce')
-        
-        data_min = df["Data_Filtro"].min().date()
-        data_max = df["Data_Filtro"].max().date()
+        data_min = df["Data_Filtro"].min().date() if not df["Data_Filtro"].isnull().all() else datetime.today()
+        data_max = df["Data_Filtro"].max().date() if not df["Data_Filtro"].isnull().all() else datetime.today()
         
         c_data1, c_data2 = st.sidebar.columns(2)
         data_inicial = c_data1.date_input("Início", data_min, format="DD/MM/YYYY")
@@ -559,24 +572,49 @@ def pagina_dashboard():
 
         st.markdown("##")
 
-        # GRÁFICOS
+        # GRÁFICOS NOVOS
         c1, c2 = st.columns(2)
         
         with c1:
-            st.subheader("📊 Atendimentos por Portal")
-            df_portal = df_filtrado[df_filtrado["Portal"].notna() & (df_filtrado["Portal"] != "-")]
-            if not df_portal.empty:
-                contagem = df_portal['Portal'].value_counts().reset_index()
-                contagem.columns = ['Portal', 'Quantidade']
-                fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
-                             x='Quantidade', y='Portal', orientation='h', text='Quantidade', 
-                             color_discrete_sequence=['#8b5cf6'])
-                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sem dados de Portal.")
+            st.subheader("📈 Tendência Diária")
+            # Agrupa por Data
+            trend = df_filtrado.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
+            fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, 
+                          title="Volume de Atendimentos por Dia", line_shape="spline",
+                          color_discrete_sequence=['#10b981'])
+            st.plotly_chart(fig, use_container_width=True)
 
         with c2:
+            st.subheader("⏰ Picos de Demanda (Horário)")
+            # Extrai a Hora
+            df_filtrado['Hora_Int'] = pd.to_datetime(df_filtrado['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
+            heatmap_data = df_filtrado.groupby('Hora_Int').size().reset_index(name='Atendimentos')
+            fig = px.bar(heatmap_data, x='Hora_Int', y='Atendimentos', 
+                         title="Volume por Faixa Horária",
+                         labels={'Hora_Int': 'Hora do Dia'},
+                         color_discrete_sequence=['#3b82f6'])
+            fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("---")
+        
+        # LINHA 2: Transportadoras (CORRIGIDO) e Motivos
+        c3, c4 = st.columns(2)
+        
+        df_pend_dash = df_filtrado[df_filtrado["Setor"] == "Pendência"]
+        
+        with c3:
+            st.subheader("🚚 Transportadoras (Detalhado)")
+            if not df_pend_dash.empty:
+                # Gráfico Stacked (Empilhado) para ver quais motivos compõem a transportadora
+                fig = px.histogram(df_pend_dash, x="Transportadora", color="Motivo", 
+                                   title="Ocorrências por Transportadora",
+                                   barmode='stack', text_auto=True)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Sem dados de Pendências.")
+
+        with c4:
             st.subheader("📊 Motivos CRM")
             df_crm = df_filtrado[df_filtrado["Motivo_CRM"].notna() & (df_filtrado["Motivo_CRM"] != "-")]
             if not df_crm.empty:
@@ -584,48 +622,28 @@ def pagina_dashboard():
                 contagem.columns = ['Motivo CRM', 'Quantidade']
                 fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
                              x='Quantidade', y='Motivo CRM', orientation='h', text='Quantidade', 
+                             title="Top Motivos CRM",
                              color_discrete_sequence=['#f43f5e'])
-                fig.update_layout(xaxis_title=None, yaxis_title=None, height=400)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sem dados de CRM.")
 
-        # Gráficos Pendência/Transportadora
         st.markdown("---")
-        st.subheader("🚚 Análise de Pendências Logísticas")
-        c_pend1, c_pend2 = st.columns(2)
+        st.subheader("📥 Exportação Geral")
         
-        df_pend = df_filtrado[df_filtrado["Setor"] == "Pendência"]
+        # Botão de Download (Gera CSV local do DF filtrado)
+        csv = converter_para_excel_csv(df_filtrado)
+        st.download_button(
+            label="Baixar Dados Filtrados (.csv)",
+            data=csv,
+            file_name="relatorio_geral_google_sheets.csv",
+            mime='text/csv',
+        )
         
-        with c_pend1:
-            if not df_pend.empty:
-                # CORREÇÃO: Gráfico Stacked para contar motivos por transportadora
-                fig = px.histogram(df_pend, x="Transportadora", color="Motivo", 
-                                   title="Transportadora x Tipo de Motivo",
-                                   barmode='stack')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sem dados de Transportadora.")
-
-        with c_pend2:
-            if not df_pend.empty:
-                contagem = df_pend['Motivo'].value_counts().reset_index()
-                contagem.columns = ['Motivo', 'Quantidade']
-                fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
-                             x='Quantidade', y='Motivo', orientation='h', text='Quantidade', 
-                             color_discrete_sequence=['#0ea5e9'])
-                fig.update_layout(title="Top Motivos (Pendências)", xaxis_title=None, yaxis_title=None, height=400)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sem dados de Pendências.")
-
-        st.markdown("---")
-        st.subheader("📋 Detalhamento Geral")
-        df_show = df_filtrado.drop(columns=["Data_Filtro"], errors='ignore')
-        st.dataframe(df_show.sort_values(by=["Data", "Hora"], ascending=False).head(50), use_container_width=True, hide_index=True)
+        st.dataframe(df_filtrado.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore').sort_values(by=["Data", "Hora"], ascending=False).head(50), use_container_width=True, hide_index=True)
 
     except Exception as e:
-        st.error(f"Erro no Dashboard: {e}. Tente apagar o arquivo .csv antigo.")
+        st.error(f"Erro no Dashboard: {e}")
 
 # ==========================================
 #           ROTEAMENTO
