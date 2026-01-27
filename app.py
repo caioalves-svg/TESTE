@@ -5,7 +5,6 @@ import os
 import pytz
 import json
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -20,58 +19,41 @@ st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layo
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
 def conectar_google_sheets():
-    """
-    Conecta ao Google Sheets.
-    PRIORIDADE: Tenta ler dos Secrets do Streamlit Cloud (Recomendado).
-    SECUNDÁRIO: Tenta ler arquivo local (Apenas para testes no PC).
-    """
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = None
+    try:
+        # Tenta pegar dos Secrets
+        if "gcp_service_account" in st.secrets:
+            secrets = st.secrets["gcp_service_account"]
+            creds_dict = {
+                "type": secrets["type"],
+                "project_id": secrets["project_id"],
+                "private_key_id": secrets["private_key_id"],
+                "private_key": secrets["private_key"].replace("\\n", "\n"), 
+                "client_email": secrets["client_email"],
+                "client_id": secrets["client_id"],
+                "auth_uri": secrets["auth_uri"],
+                "token_uri": secrets["token_uri"],
+                "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": secrets["client_x509_cert_url"]
+            }
+            client = gspread.service_account_from_dict(creds_dict)
+            sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
+            return sheet
 
-    # 1. TENTATIVA: Ler dos Secrets (Configuração da Nuvem)
-    if "gcp_service_account" in st.secrets:
-        try:
-            # Cria um dicionário a partir dos secrets
-            creds_dict = dict(st.secrets["gcp_service_account"])
+        # Fallback: Arquivo Local
+        elif os.path.exists("credentials.json"):
+            client = gspread.service_account(filename="credentials.json")
+            sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
+            return sheet
             
-            # --- CORREÇÃO DE CHAVE PRIVADA (JWT) ---
-            # O Google precisa que os '\n' sejam quebras de linha reais.
-            # O código abaixo garante isso, independente de como foi colado.
-            if "private_key" in creds_dict:
-                pk = creds_dict["private_key"]
-                # Se tiver a string literal "\n", substitui por quebra real
-                if "\\n" in pk:
-                    pk = pk.replace("\\n", "\n")
-                creds_dict["private_key"] = pk
-
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        except Exception as e:
-            # Não mostramos o erro aqui para tentar o método local depois
-            pass
-
-    # 2. TENTATIVA: Ler arquivo local (Se não achou secrets ou falhou)
-    if creds is None:
-        if os.path.exists("credentials.json"):
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         else:
-            st.error("🚨 ERRO DE CONEXÃO: Credenciais não encontradas.")
-            st.info("No Streamlit Cloud, verifique se a 'private_key' nos Secrets está correta.")
+            st.error("🚨 Nenhuma credencial encontrada (Secrets ou Arquivo).")
             return None
 
-    # Conectar
-    try:
-        client = gspread.authorize(creds)
-        sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
-        return sheet
-    except gspread.SpreadsheetNotFound:
-        st.error(f"⚠️ Planilha '{NOME_PLANILHA_GOOGLE}' não encontrada. Verifique se você compartilhou a planilha com o e-mail do robô (client_email nos secrets).")
-        return None
     except Exception as e:
-        st.error(f"Erro de conexão (JWT/Auth): {e}")
+        st.error(f"Erro de Conexão: {e}")
         return None
 
 def carregar_dados():
-    """Lê os dados diretamente do Google Sheets."""
     sheet = conectar_google_sheets()
     if sheet:
         try:
@@ -81,23 +63,34 @@ def carregar_dados():
             else:
                 return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
         except Exception as e:
-            st.error(f"Erro ao ler dados: {e}")
+            st.error(f"Erro ao ler dados da planilha: {e}")
     return pd.DataFrame()
 
+def obter_dia_semana_pt(dt):
+    """Retorna o dia da semana em Português."""
+    dias = {
+        0: "Segunda-feira",
+        1: "Terça-feira",
+        2: "Quarta-feira",
+        3: "Quinta-feira",
+        4: "Sexta-feira",
+        5: "Sábado",
+        6: "Domingo"
+    }
+    return dias[dt.weekday()]
+
 def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
-    """Salva uma nova linha no Google Sheets."""
     sheet = conectar_google_sheets()
     if sheet:
         agora = obter_data_hora_brasil()
-        
-        # Força conversão para string
         str_nf = str(nf)
         str_pedido = str(numero_pedido)
+        dia_pt = obter_dia_semana_pt(agora)
 
         nova_linha = [
-            agora.strftime("%d/%m/%Y"),      # Data
-            agora.strftime("%H:%M:%S"),      # Hora
-            agora.strftime("%A"),            # Dia da Semana
+            agora.strftime("%d/%m/%Y"),      
+            agora.strftime("%H:%M:%S"),      
+            dia_pt,                          # Dia em Português
             setor,
             colaborador,
             motivo,
@@ -116,7 +109,6 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
     return False
 
 def converter_para_excel_csv(df):
-    """Converte DF para CSV forçando colunas numéricas a serem texto."""
     df_export = df.copy()
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
@@ -222,9 +214,9 @@ modelos_sac = {
     "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}"""
 }
 
-# Ordena a lista de chaves (Motivos do Contato) para o Dropdown
+# ORDENAÇÃO DE LISTA CORRIGIDA (APÓS DEFINIÇÃO DE MODELOS_SAC)
 lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k != "OUTROS"])
-lista_motivos_contato.append("OUTROS") # Deixa "OUTROS" no final
+lista_motivos_contato.append("OUTROS")
 
 # ==========================================
 #      FUNÇÕES DE BANCO DE DADOS
@@ -255,73 +247,44 @@ def copiar_para_clipboard(texto):
     components.html(js, height=0, width=0)
 
 # ==========================================
-#      DESIGN CLEAN (FORÇANDO MODO CLARO)
+#      DESIGN CLEAN
 # ==========================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
     
-    /* Força Fundo Claro */
     .stApp { background-color: #f8fafc !important; font-family: 'Inter', sans-serif; }
-    
-    /* Força Sidebar Branca */
     section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
-    
-    /* Força Texto Escuro (Anti-Dark Mode) */
-    .stApp, .stApp * {
-        color: #334155 !important;
-    }
-    
-    /* Títulos Escuros */
+    .stApp, .stApp * { color: #334155 !important; }
     h1, h2, h3, h4, h5, h6 { color: #0f172a !important; font-weight: 700; }
-
-    /* Inputs (Caixas de Texto e Select) */
+    
     .stSelectbox div[data-baseweb="select"] > div, 
-    .stTextInput input, 
-    .stDateInput input, 
-    .stTextArea textarea {
+    .stTextInput input, .stDateInput input, .stTextArea textarea {
         background-color: #ffffff !important; 
         border: 1px solid #94a3b8 !important; 
         border-radius: 8px !important; 
         color: #1e293b !important;
     }
-    
-    /* Placeholders dos inputs */
     ::placeholder { color: #94a3b8 !important; opacity: 1; }
 
-    /* Caixa de Preview da Mensagem */
     .preview-box { 
-        background-color: #f1f5f9 !important; 
-        border-left: 5px solid #3b82f6; 
-        border-radius: 4px; 
-        padding: 20px; 
-        color: #334155 !important; 
-        white-space: pre-wrap; 
-        margin-top: 10px; 
-        font-size: 14px; 
+        background-color: #f1f5f9 !important; border-left: 5px solid #3b82f6; 
+        border-radius: 4px; padding: 20px; color: #334155 !important; 
+        white-space: pre-wrap; margin-top: 10px; font-size: 14px; 
     }
 
-    /* Botões */
     .botao-registrar .stButton button {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; 
-        color: white !important; 
-        border: none; 
-        padding: 0.8rem 2rem; 
-        border-radius: 8px; 
-        font-weight: 600; 
-        width: 100%; 
+        color: white !important; border: none; padding: 0.8rem 2rem; 
+        border-radius: 8px; font-weight: 600; width: 100%; 
         box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
     }
-    .botao-registrar .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 8px rgba(16, 185, 129, 0.3); }
+    .botao-registrar .stButton button:hover { transform: translateY(-2px); }
 
     .stDownloadButton button { background-color: #3b82f6 !important; color: white !important; border: none !important; border-radius: 8px; font-weight: 600; width: 100%; }
     .stDownloadButton button:hover { background-color: #2563eb !important; }
     
-    /* Remover espaços em branco vazios */
-    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column;"] > div[data-testid="stVerticalBlock"] {
-        gap: 0rem;
-    }
-    
+    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column;"] > div[data-testid="stVerticalBlock"] { gap: 0rem; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -355,7 +318,6 @@ def pagina_pendencias():
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
         
-        # CAMPOS PARA BANCO DE DADOS
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
         numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_p")
@@ -371,25 +333,22 @@ def pagina_pendencias():
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
         
-        # 1. Variáveis Base
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
         assinatura_nome = colab
 
-        # 2. Regra Amazon (Remove nome do colaborador)
         if "AMAZON" in portal:
             assinatura_nome = ""
 
-        # 3. Substituições Iniciais
+        # Substituições Gerais
         texto_base = texto_cru.replace("{transportadora}", transp)\
                               .replace("{colaborador}", assinatura_nome)\
                               .replace("{nome_cliente}", nome_cliente_str)\
                               .replace("(Nome do cliente)", nome_cliente_str)
 
-        # 4. Regra Via Varejo - PADRÃO "Olá" MANTIDO 
+        # Regra Via Varejo: Mantém o "Olá"
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-             texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
+             pass 
 
-        # 5. Inserção da Frase do Pedido
         motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
         
         if opcao not in motivos_sem_texto:
@@ -402,7 +361,7 @@ def pagina_pendencias():
             else:
                 texto_final = f"{frase_pedido}\n\n{texto_base}"
         else:
-            texto_final = "" # Mantém vazio para registro puro
+            texto_final = ""
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
         
@@ -440,7 +399,7 @@ def pagina_sac():
         
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # Campos Dinâmicos - CORREÇÃO CRÍTICA DO ERRO 'StreamlitDuplicateElementId'
+        # === CORREÇÃO DOS ERROS DE ID (Adicionei key= em todos) ===
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
@@ -451,7 +410,7 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
-            # KEY ÚNICA ADICIONADA AQUI PARA CORRIGIR O ERRO
+            # --- Correção do ID Duplicado Aqui ---
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
@@ -579,8 +538,13 @@ def pagina_dashboard():
         st.sidebar.markdown("---")
         st.sidebar.subheader("Filtros do Painel")
         
-        data_min = df["Data_Filtro"].min().date() if not df["Data_Filtro"].isnull().all() else datetime.today()
-        data_max = df["Data_Filtro"].max().date() if not df["Data_Filtro"].isnull().all() else datetime.today()
+        # Filtro de Data Robusto
+        data_min = datetime.today().date()
+        data_max = datetime.today().date()
+        
+        if not df["Data_Filtro"].isnull().all():
+            data_min = df["Data_Filtro"].min().date()
+            data_max = df["Data_Filtro"].max().date()
         
         c_data1, c_data2 = st.sidebar.columns(2)
         data_inicial = c_data1.date_input("Início", data_min, format="DD/MM/YYYY")
@@ -624,45 +588,35 @@ def pagina_dashboard():
                          title="Volume por Faixa Horária",
                          labels={'Hora_Int': 'Hora do Dia'},
                          color_discrete_sequence=['#3b82f6'])
+            # FORÇA BARRAS VERTICAIS COM NÚMERO EM CIMA
+            fig.update_traces(texttemplate='%{y}', textposition='outside')
             fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
             st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("---")
         
         # LINHA 2
-        c3, c4 = st.columns(2)
         
-        df_pend_dash = df_filtrado[df_filtrado["Setor"] == "Pendência"]
-        
-        with c3:
-            st.subheader("🚚 Transportadoras (Detalhado)")
-            if not df_pend_dash.empty:
-                # CORREÇÃO: Gráfico Stacked + Text Auto para mostrar números dentro das barras
-                fig = px.histogram(df_pend_dash, x="Transportadora", color="Motivo", 
-                                   title="Ocorrências por Transportadora",
-                                   barmode='stack', text_auto=True)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sem dados de Pendências.")
-
-        with c4:
-            st.subheader("📊 Motivos CRM")
-            df_crm = df_filtrado[df_filtrado["Motivo_CRM"].notna() & (df_filtrado["Motivo_CRM"] != "-")]
-            if not df_crm.empty:
-                contagem = df_crm['Motivo_CRM'].value_counts().reset_index()
-                contagem.columns = ['Motivo CRM', 'Quantidade']
-                fig = px.bar(contagem.head(10).sort_values('Quantidade', ascending=True), 
-                             x='Quantidade', y='Motivo CRM', orientation='h', text='Quantidade', 
-                             title="Top Motivos CRM",
-                             color_discrete_sequence=['#f43f5e'])
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sem dados de CRM.")
+        st.subheader("📊 Motivos CRM")
+        df_crm = df_filtrado[df_filtrado["Motivo_CRM"].notna() & (df_filtrado["Motivo_CRM"] != "-")]
+        if not df_crm.empty:
+            contagem = df_crm['Motivo_CRM'].value_counts().reset_index()
+            contagem.columns = ['Motivo CRM', 'Quantidade']
+            # BARRAS VERTICAIS E NÚMEROS EM CIMA
+            fig = px.bar(contagem.head(15).sort_values('Quantidade', ascending=False), 
+                         x='Motivo CRM', y='Quantidade', 
+                         text='Quantidade', # Define o texto como o valor Y
+                         title="Top Motivos CRM",
+                         color_discrete_sequence=['#f43f5e'])
+            fig.update_traces(textposition='outside') # Coloca o número em cima da barra
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Sem dados de CRM.")
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
         
-        # Botão de Download com a correção de formato TEXTO
+        # Botão de Download
         csv = converter_para_excel_csv(df_filtrado)
         st.download_button(
             label="Baixar Dados Filtrados (.csv)",
