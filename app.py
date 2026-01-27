@@ -14,52 +14,50 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      CONEXÃO GOOGLE SHEETS (MÉTODO NATIVO ROBUSTO)
+#      CONEXÃO GOOGLE SHEETS (CORREÇÃO DE JWT)
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
 def conectar_google_sheets():
     """
-    Conecta ao Google Sheets usando o método nativo do gspread.
-    Resolve erros de JWT Signature automaticamente.
+    Conecta ao Google Sheets construindo o dicionário manualmente para evitar erros de JWT.
     """
-    creds_dict = None
-
-    # 1. Tenta ler dos Secrets (Nuvem)
-    if "gcp_service_account" in st.secrets:
-        try:
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            # Limpeza de segurança na chave privada (Remove quebras literais)
-            if "private_key" in creds_dict:
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-        except Exception as e:
-            st.warning(f"Erro ao ler Secrets: {e}")
-
-    # 2. Se não achou na nuvem, tenta arquivo local (PC)
-    if creds_dict is None and os.path.exists("credentials.json"):
-        try:
-            with open("credentials.json", "r") as f:
-                creds_dict = json.load(f)
-        except Exception as e:
-            st.error(f"Erro ao ler arquivo local: {e}")
-
-    # Se não temos credenciais em lugar nenhum
-    if creds_dict is None:
-        st.error("🚨 Credenciais não encontradas. Configure os Secrets no Streamlit Cloud.")
-        return None
-
-    # Tenta conectar
     try:
-        # Usa o método service_account_from_dict que é mais moderno e robusto
-        client = gspread.service_account_from_dict(creds_dict)
-        sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
-        return sheet
-    except gspread.SpreadsheetNotFound:
-        st.error(f"⚠️ Planilha '{NOME_PLANILHA_GOOGLE}' não encontrada. Compartilhe ela com: {creds_dict.get('client_email')}")
-        return None
+        # Tenta pegar dos Secrets
+        if "gcp_service_account" in st.secrets:
+            secrets = st.secrets["gcp_service_account"]
+            
+            # Constrói o dicionário explicitamente para garantir o formato
+            creds_dict = {
+                "type": secrets["type"],
+                "project_id": secrets["project_id"],
+                "private_key_id": secrets["private_key_id"],
+                "private_key": secrets["private_key"].replace("\\n", "\n"), # Correção crucial
+                "client_email": secrets["client_email"],
+                "client_id": secrets["client_id"],
+                "auth_uri": secrets["auth_uri"],
+                "token_uri": secrets["token_uri"],
+                "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": secrets["client_x509_cert_url"]
+            }
+            
+            # Conecta usando o gspread
+            client = gspread.service_account_from_dict(creds_dict)
+            sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
+            return sheet
+
+        # Fallback: Arquivo Local (apenas para testes no seu PC)
+        elif os.path.exists("credentials.json"):
+            client = gspread.service_account(filename="credentials.json")
+            sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
+            return sheet
+            
+        else:
+            st.error("🚨 Nenhuma credencial encontrada (Secrets ou Arquivo).")
+            return None
+
     except Exception as e:
-        # Mostra o erro detalhado se falhar
-        st.error(f"Erro Crítico de Conexão: {e}")
+        st.error(f"Erro de Conexão: {e}")
         return None
 
 def carregar_dados():
@@ -73,7 +71,7 @@ def carregar_dados():
             else:
                 return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
         except Exception as e:
-            st.error(f"Erro ao ler dados: {e}")
+            st.error(f"Erro ao ler dados da planilha: {e}")
     return pd.DataFrame()
 
 def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
@@ -408,6 +406,7 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
+            # --- Correção do ID Duplicado Aqui ---
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
