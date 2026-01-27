@@ -530,7 +530,26 @@ def pagina_dashboard():
     try:
         df = carregar_dados()
         if df.empty:
-            st.warning("A planilha do Google Sheets está vazia.")
+            # MOSTRAR CAMPO DE UPLOAD SE A PLANILHA ESTIVER VAZIA (PRIMEIRO USO)
+            st.warning("A planilha do Google Sheets está vazia. Você pode importar um backup.")
+            uploaded_file = st.file_uploader("📂 Restaurar Backup (CSV Antigo)", type="csv")
+            if uploaded_file is not None:
+                if st.button("⬆️ Carregar para Nuvem"):
+                    df_upload = pd.read_csv(uploaded_file, sep=";", encoding='utf-8-sig') # Tenta ler formato antigo
+                    
+                    # Processa e envia em lote
+                    sheet = conectar_google_sheets()
+                    if sheet:
+                        # Adiciona coluna Dia_Semana se não existir
+                        if "Dia_Semana" not in df_upload.columns:
+                            df_upload["Dia_Semana"] = "-" 
+                        
+                        # Converte tudo para string para evitar erro
+                        df_upload = df_upload.astype(str)
+                        
+                        # Append
+                        sheet.append_rows(df_upload.values.tolist())
+                        st.success("Backup restaurado com sucesso! Atualize a página.")
             return
 
         df["Data_Filtro"] = pd.to_datetime(df["Data"], format="%d/%m/%Y", errors='coerce')
@@ -614,6 +633,31 @@ def pagina_dashboard():
             st.info("Sem dados de CRM.")
 
         st.markdown("---")
+        
+        # BARRA LATERAL RESTAURADA (UPLOAD)
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📂 Ferramentas")
+        uploaded_file = st.sidebar.file_uploader("Restaurar Backup (.csv)", type="csv")
+        if uploaded_file is not None:
+            if st.sidebar.button("Enviar para Nuvem"):
+                try:
+                    df_upload = pd.read_csv(uploaded_file, sep=";", encoding='utf-8-sig')
+                    sheet = conectar_google_sheets()
+                    if sheet:
+                        # Adiciona coluna Dia_Semana se não existir (para compatibilidade)
+                        if "Dia_Semana" not in df_upload.columns:
+                            # Tenta calcular ou coloca vazio
+                            df_upload.insert(2, "Dia_Semana", "-")
+                        
+                        # Converte para string
+                        df_upload = df_upload.astype(str)
+                        
+                        # Envia
+                        sheet.append_rows(df_upload.values.tolist())
+                        st.sidebar.success("✅ Dados enviados com sucesso!")
+                except Exception as e:
+                    st.sidebar.error(f"Erro no upload: {e}")
+
         st.subheader("📥 Exportação Geral")
         
         # Botão de Download
