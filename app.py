@@ -5,7 +5,6 @@ import os
 import pytz
 import json
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -15,51 +14,52 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      CONEXÃO GOOGLE SHEETS (CORREÇÃO DE JWT)
+#      CONEXÃO GOOGLE SHEETS (MÉTODO NATIVO ROBUSTO)
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
 def conectar_google_sheets():
     """
-    Conecta ao Google Sheets.
-    PRIORIDADE: Tenta ler dos Secrets do Streamlit Cloud (Recomendado).
-    SECUNDÁRIO: Tenta ler arquivo local (Apenas para testes no PC).
+    Conecta ao Google Sheets usando o método nativo do gspread.
+    Resolve erros de JWT Signature automaticamente.
     """
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = None
+    creds_dict = None
 
-    # 1. TENTATIVA: Ler dos Secrets (Configuração da Nuvem)
+    # 1. Tenta ler dos Secrets (Nuvem)
     if "gcp_service_account" in st.secrets:
         try:
             creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # --- CORREÇÃO CRÍTICA DO JWT ---
-            # Substitui quebras de linha literais por reais para o Google aceitar a chave
+            # Limpeza de segurança na chave privada (Remove quebras literais)
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-            
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         except Exception as e:
             st.warning(f"Erro ao ler Secrets: {e}")
 
-    # 2. TENTATIVA: Ler arquivo local (Se não achou secrets)
-    if creds is None:
-        if os.path.exists("credentials.json"):
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-        else:
-            st.error("🚨 ERRO DE CONEXÃO: Credenciais não encontradas.")
-            return None
+    # 2. Se não achou na nuvem, tenta arquivo local (PC)
+    if creds_dict is None and os.path.exists("credentials.json"):
+        try:
+            with open("credentials.json", "r") as f:
+                creds_dict = json.load(f)
+        except Exception as e:
+            st.error(f"Erro ao ler arquivo local: {e}")
 
-    # Conectar
+    # Se não temos credenciais em lugar nenhum
+    if creds_dict is None:
+        st.error("🚨 Credenciais não encontradas. Configure os Secrets no Streamlit Cloud.")
+        return None
+
+    # Tenta conectar
     try:
-        client = gspread.authorize(creds)
+        # Usa o método service_account_from_dict que é mais moderno e robusto
+        client = gspread.service_account_from_dict(creds_dict)
         sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
         return sheet
     except gspread.SpreadsheetNotFound:
-        st.error(f"⚠️ Planilha '{NOME_PLANILHA_GOOGLE}' não encontrada. Verifique se você compartilhou a planilha com o e-mail do robô.")
+        st.error(f"⚠️ Planilha '{NOME_PLANILHA_GOOGLE}' não encontrada. Compartilhe ela com: {creds_dict.get('client_email')}")
         return None
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
+        # Mostra o erro detalhado se falhar
+        st.error(f"Erro Crítico de Conexão: {e}")
         return None
 
 def carregar_dados():
@@ -81,8 +81,6 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
     sheet = conectar_google_sheets()
     if sheet:
         agora = obter_data_hora_brasil()
-        
-        # Força conversão para string para evitar erros no Excel depois
         str_nf = str(nf)
         str_pedido = str(numero_pedido)
 
@@ -94,8 +92,8 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             colaborador,
             motivo,
             portal,
-            str_nf,                          # Salva como Texto
-            str_pedido,                      # Salva como Texto
+            str_nf,
+            str_pedido,
             motivo_crm,
             transportadora
         ]
@@ -469,7 +467,6 @@ def pagina_sac():
         excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "OUTROS"]
         scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
-        # Não adiciona frase de pedido se for um script do Martins (pois já tem formato próprio)
         if opcao not in excecoes_nf and opcao not in scripts_martins:
             ped_str = numero_pedido if numero_pedido else "..."
             frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
@@ -480,7 +477,6 @@ def pagina_sac():
             else:
                 texto_final = f"{frase_pedido}\n\n{texto_base}"
         elif opcao in scripts_martins:
-            # Substituição específica para os scripts Martins
             texto_final = texto_base.replace("{nome_cliente}", nome_cliente_str)
         else:
             texto_final = texto_base
