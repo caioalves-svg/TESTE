@@ -623,16 +623,16 @@ def pagina_dashboard():
             heatmap_data = pd.merge(heatmap_data, total_por_setor, on='Setor')
             heatmap_data['Porcentagem'] = (heatmap_data['Atendimentos'] / heatmap_data['Total_Setor']) * 100
             
-            fig = px.bar(heatmap_data, x='Hora_Int', y='Porcentagem', 
+            fig = px.line(heatmap_data, x='Hora_Int', y='Porcentagem', 
                          title="Volume por Faixa Horária (% do Setor)",
                          labels={'Hora_Int': 'Hora do Dia', 'Porcentagem': '% do Setor'},
                          color='Setor', 
-                         barmode='group', 
+                         markers=True, # Adiciona marcadores (bolinhas)
                          text='Porcentagem', 
                          # --- CORES TROCADAS AQUI ---
                          color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'}) # Azul e Verde
                          
-            fig.update_traces(texttemplate='%{y:.1f}%', textposition='outside') 
+            fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center') 
             fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
             st.plotly_chart(fig, use_container_width=True)
 
