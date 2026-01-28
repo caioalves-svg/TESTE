@@ -645,13 +645,21 @@ def pagina_dashboard():
         if not df_crm.empty:
             contagem = df_crm['Motivo_CRM'].value_counts().reset_index()
             contagem.columns = ['Motivo CRM', 'Quantidade']
+            
+            # CALCULA O MAXIMO PARA DAR RESPIRO NO GRAFICO (Evita cortar numero)
+            max_y = contagem['Quantidade'].max()
+            
             # BARRAS VERTICAIS E NÚMEROS EM CIMA
             fig = px.bar(contagem.head(15).sort_values('Quantidade', ascending=False), 
                          x='Motivo CRM', y='Quantidade', 
                          text='Quantidade', # Define o texto como o valor Y
                          title="Top Motivos CRM",
                          color_discrete_sequence=['#f43f5e'])
-            fig.update_traces(textposition='outside') # Coloca o número em cima da barra
+            
+            # CORREÇÃO DO NÚMERO CORTADO
+            fig.update_traces(textposition='outside', cliponaxis=False) 
+            fig.update_layout(yaxis_range=[0, max_y * 1.2]) # Adiciona 20% de espaço no topo
+            
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Sem dados de CRM.")
