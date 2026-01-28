@@ -602,25 +602,30 @@ def pagina_dashboard():
             trend = df_filtrado.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
             fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, 
                           title="Volume de Atendimentos por Dia", line_shape="spline",
-                          color_discrete_sequence=['#10b981'])
-            fig.update_xaxes(tickformat="%d/%m", dtick="D1") # Força formato DD/MM e ticks diários
+                          color_discrete_sequence=['#10b981'],
+                          text='Atendimentos') # ADICIONADO TEXTO NO GRAFICO
+            fig.update_traces(textposition="top center") # TEXTO EM CIMA DA BOLINHA
+            fig.update_xaxes(tickformat="%d/%m", dtick="D1") 
             st.plotly_chart(fig, use_container_width=True)
 
         with c2:
             st.subheader("⏰ Picos de Demanda (Horário)")
             df_filtrado['Hora_Int'] = pd.to_datetime(df_filtrado['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
-            # Agrupa por Hora e Setor para separar no gráfico
-            heatmap_data = df_filtrado.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
             
-            fig = px.bar(heatmap_data, x='Hora_Int', y='Atendimentos', 
-                         title="Volume por Faixa Horária",
-                         labels={'Hora_Int': 'Hora do Dia'},
-                         color='Setor', # Separa as cores por setor
-                         barmode='group', # Coloca as barras lado a lado
-                         color_discrete_sequence=['#3b82f6', '#f43f5e']) # Cores customizadas
+            # CALCULO DE PORCENTAGEM SOBRE O TOTAL FILTRADO
+            total_periodo = len(df_filtrado)
+            heatmap_data = df_filtrado.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
+            heatmap_data['Porcentagem'] = (heatmap_data['Atendimentos'] / total_periodo) * 100
+            
+            fig = px.bar(heatmap_data, x='Hora_Int', y='Porcentagem', # EIXO Y AGORA É % 
+                         title="Volume por Faixa Horária (%)",
+                         labels={'Hora_Int': 'Hora do Dia', 'Porcentagem': '% do Total'},
+                         color='Setor', 
+                         barmode='group', 
+                         text='Porcentagem', # MOSTRA O VALOR %
+                         color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'}) # PENDÊNCIA AZUL, SAC VERDE
                          
-            # FORÇA BARRAS VERTICAIS COM NÚMERO EM CIMA
-            fig.update_traces(texttemplate='%{y}', textposition='outside')
+            fig.update_traces(texttemplate='%{y:.1f}%', textposition='outside') # FORMATA TEXTO COMO 10.5%
             fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
             st.plotly_chart(fig, use_container_width=True)
 
