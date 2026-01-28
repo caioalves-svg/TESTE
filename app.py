@@ -171,7 +171,7 @@ modelos_pendencias = {
 # ==========================================
 modelos_sac = {
     "OUTROS": "", 
-    "RECLAME AQUI": "",  # <--- NOVA OPÇÃO ADICIONADA AQUI
+    "RECLAME AQUI": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
     "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
@@ -548,7 +548,7 @@ def pagina_dashboard():
                     if sheet:
                         # Adiciona coluna Dia_Semana se não existir
                         if "Dia_Semana" not in df_upload.columns:
-                            df_upload["Dia_Semana"] = "-" 
+                            df_upload.insert(2, "Dia_Semana", "-")
                         
                         # Converte tudo para string para evitar erro
                         df_upload = df_upload.astype(str)
@@ -603,16 +603,22 @@ def pagina_dashboard():
             fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, 
                           title="Volume de Atendimentos por Dia", line_shape="spline",
                           color_discrete_sequence=['#10b981'])
+            fig.update_xaxes(tickformat="%d/%m", dtick="D1") # Força formato DD/MM e ticks diários
             st.plotly_chart(fig, use_container_width=True)
 
         with c2:
             st.subheader("⏰ Picos de Demanda (Horário)")
             df_filtrado['Hora_Int'] = pd.to_datetime(df_filtrado['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
-            heatmap_data = df_filtrado.groupby('Hora_Int').size().reset_index(name='Atendimentos')
+            # Agrupa por Hora e Setor para separar no gráfico
+            heatmap_data = df_filtrado.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
+            
             fig = px.bar(heatmap_data, x='Hora_Int', y='Atendimentos', 
                          title="Volume por Faixa Horária",
                          labels={'Hora_Int': 'Hora do Dia'},
-                         color_discrete_sequence=['#3b82f6'])
+                         color='Setor', # Separa as cores por setor
+                         barmode='group', # Coloca as barras lado a lado
+                         color_discrete_sequence=['#3b82f6', '#f43f5e']) # Cores customizadas
+                         
             # FORÇA BARRAS VERTICAIS COM NÚMERO EM CIMA
             fig.update_traces(texttemplate='%{y}', textposition='outside')
             fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
