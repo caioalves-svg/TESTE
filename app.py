@@ -612,20 +612,27 @@ def pagina_dashboard():
             st.subheader("⏰ Picos de Demanda (Horário)")
             df_filtrado['Hora_Int'] = pd.to_datetime(df_filtrado['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
             
-            # CALCULO DE PORCENTAGEM SOBRE O TOTAL FILTRADO
-            total_periodo = len(df_filtrado)
-            heatmap_data = df_filtrado.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
-            heatmap_data['Porcentagem'] = (heatmap_data['Atendimentos'] / total_periodo) * 100
+            # --- CÁLCULO SEPARADO POR SETOR (SOLICITADO) ---
+            # Agrupa por Setor para ter o total de cada um
+            total_por_setor = df_filtrado.groupby('Setor').size().reset_index(name='Total_Setor')
             
-            fig = px.bar(heatmap_data, x='Hora_Int', y='Porcentagem', # EIXO Y AGORA É % 
-                         title="Volume por Faixa Horária (%)",
-                         labels={'Hora_Int': 'Hora do Dia', 'Porcentagem': '% do Total'},
+            # Agrupa por Hora e Setor
+            heatmap_data = df_filtrado.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
+            
+            # Junta as tabelas para calcular a % relativa ao setor
+            heatmap_data = pd.merge(heatmap_data, total_por_setor, on='Setor')
+            heatmap_data['Porcentagem'] = (heatmap_data['Atendimentos'] / heatmap_data['Total_Setor']) * 100
+            
+            fig = px.bar(heatmap_data, x='Hora_Int', y='Porcentagem', 
+                         title="Volume por Faixa Horária (% do Setor)",
+                         labels={'Hora_Int': 'Hora do Dia', 'Porcentagem': '% do Setor'},
                          color='Setor', 
                          barmode='group', 
-                         text='Porcentagem', # MOSTRA O VALOR %
-                         color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'}) # PENDÊNCIA AZUL, SAC VERDE
+                         text='Porcentagem', 
+                         # --- CORES TROCADAS AQUI ---
+                         color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'}) # Azul e Verde
                          
-            fig.update_traces(texttemplate='%{y:.1f}%', textposition='outside') # FORMATA TEXTO COMO 10.5%
+            fig.update_traces(texttemplate='%{y:.1f}%', textposition='outside') 
             fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
             st.plotly_chart(fig, use_container_width=True)
 
