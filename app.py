@@ -701,7 +701,9 @@ def pagina_dashboard():
             mime='text/csv',
         )
         
-        st.dataframe(df_filtrado.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore').sort_values(by=["Data", "Hora"], ascending=False).head(50), use_container_width=True, hide_index=True)
+        # ORDENAÇÃO CORRIGIDA: PELA DATA REAL (Data_Filtro)
+        df_display = df_filtrado.sort_values(by=["Data_Filtro", "Hora"], ascending=False).head(50)
+        st.dataframe(df_display.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore'), use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Erro no Dashboard: {e}")
