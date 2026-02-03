@@ -173,6 +173,21 @@ modelos_sac = {
     "OUTROS": "", 
     "RECLAME AQUI": "", 
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
+    
+    # --- NOVOS SCRIPTS ADICIONADOS ---
+    "ENTREGA RECUSADA": """Olá, (Nome do cliente). Tudo bem?\n\nRecebemos uma notificação da transportadora informando que a entrega do seu pedido foi recusada no endereço de destino.\n\nHouve algum problema na tentativa de entrega ou avaria na embalagem?\n\n· Se deseja receber o produto: Por gentileza, nos confirme o endereço e pontos de referência.\n· Se deseja cancelar: Nos informe por aqui para agilizarmos o processo.\n\nAtenção:\nCaso não tenhamos retorno até {data_limite}, o produto retornará ao nosso estoque e seguiremos com o cancelamento automático.\n\nAguardo seu retorno!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "AGUARDANDO RETORNO (FOLLOW UP)": """Olá, (Nome do cliente).\n\nPassando para informar que seu caso continua sendo tratado como prioridade por nossa equipe.\n\nJá acionamos o setor responsável/transportadora e estamos apenas aguardando a formalização da resposta para lhe posicionar com a solução definitiva. Não se preocupe, estou acompanhando pessoalmente o seu pedido.\n\nAssim que tiver o retorno, entro em contato imediatamente. Obrigado pela paciência!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "PEDIDO EM EXPEDIÇÃO": """Olá, (Nome do cliente).\n\nTrago boas notícias! O seu pedido já foi aprovado e encontra-se atualmente em processo de expedição (separação e embalagem).\n\nEsta etapa garante que tudo chegue perfeito para você e pode levar até 72 horas úteis. Assim que o pacote for coletado pela transportadora, o código de rastreio será gerado e enviado para você acompanhar a rota de entrega.\n\nQualquer dúvida, estou à disposição!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "SOLICITAÇÃO DE BARRAR EXPEDIÇÃO": """Olá, (Nome do cliente).\n\nRecebemos sua solicitação de cancelamento. Informo que já acionei nosso estoque solicitando o bloqueio imediato da expedição do pedido.\n\nEstamos aguardando apenas a confirmação da equipe logística de que o produto não foi coletado. Assim que confirmado, seguiremos com o reembolso conforme nossa política.\n\nTe aviso assim que tiver o "OK" do estoque!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "PEDIDO CANCELADO (ENTREGUE)": """Olá, (Nome do cliente).\n\nNotamos pelo rastreio que o pedido foi entregue com sucesso no dia {data_entrega}.\n\nComo a plataforma Amazon já havia processado o reembolso deste pedido anteriormente, precisamos regularizar a situação. Por uma questão de ética e transparência, gostaríamos de confirmar como prefere prosseguir:\n\n1. Autorizar uma nova cobrança (Retrocharge) e ficar com o produto?\n2. Realizar a devolução do item? (Enviaremos um código de postagem sem custos).\n\nAguardamos seu retorno para finalizar este atendimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    "PEDIDO CANCELADO (EM TRÂNSITO)": """Olá, (Nome do cliente).\n\nVerificamos que a plataforma já seguiu com o seu reembolso integral.\n\nComo o pedido ainda consta em rota, já solicitamos à transportadora que suspenda a entrega. No entanto, caso o entregador compareça ao seu endereço antes da atualização do sistema, orientamos que recuse o recebimento no ato da entrega.\n\nIsso garantirá que o pacote retorne ao nosso estoque automaticamente, finalizando o processo de forma correta.\n\nAgradecemos a compreensão!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    # ---------------------------------
+
     "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (PREÇO)": """Olá, {nome_cliente}!\n\nIdentificamos uma divergência no valor do produto devido a um erro técnico na transmissão de nossa tabela de precificação. Em razão disso, solicitamos o cancelamento do pedido para que possamos regularizar a situação.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
@@ -449,6 +464,12 @@ def pagina_sac():
             dados["{estado}"] = st.text_input("Estado:", key="uf_ins")
             dados["{complemento}"] = st.text_input("Complemento (opcional):", value="", key="comp_ins")
             dados["{referencia}"] = st.text_input("Ponto de Referência (opcional):", value="", key="ref_ins")
+        elif "ENTREGA RECUSADA" in op_upper: # Adicionado
+            st.info("📅 Dados de Prazo")
+            dados["{data_limite}"] = st.text_input("Data/Horário limite:", key="data_limite_recusa")
+        elif "PEDIDO CANCELADO (ENTREGUE)" in op_upper: # Adicionado
+            st.info("📅 Dados da Entrega")
+            dados["{data_entrega}"] = st.text_input("Data da Entrega:", key="data_entrega_canc_ent")
 
     with col2:
         st.subheader("2. Visualização")
