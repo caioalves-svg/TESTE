@@ -14,13 +14,12 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      CONEXÃO GOOGLE SHEETS (HÍBRIDA & SEGURA)
+#      CONEXÃO GOOGLE SHEETS
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
 def conectar_google_sheets():
     try:
-        # Tenta pegar dos Secrets
         if "gcp_service_account" in st.secrets:
             secrets = st.secrets["gcp_service_account"]
             creds_dict = {
@@ -38,75 +37,50 @@ def conectar_google_sheets():
             client = gspread.service_account_from_dict(creds_dict)
             sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
             return sheet
-
-        # Fallback: Arquivo Local
         elif os.path.exists("credentials.json"):
             client = gspread.service_account(filename="credentials.json")
             sheet = client.open(NOME_PLANILHA_GOOGLE).sheet1
             return sheet
-            
         else:
-            st.error("🚨 Nenhuma credencial encontrada (Secrets ou Arquivo).")
+            st.error("🚨 Nenhuma credencial encontrada.")
             return None
-
     except Exception as e:
         st.error(f"Erro de Conexão: {e}")
         return None
+
+def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
+    sheet = conectar_google_sheets()
+    if sheet:
+        try:
+            agora = obter_data_hora_brasil()
+            str_nf = str(nf)
+            str_pedido = str(numero_pedido)
+            dia_pt = obter_dia_semana_pt(agora)
+            nova_linha = [agora.strftime("%d/%m/%Y"), agora.strftime("%H:%M:%S"), dia_pt, setor, colaborador, motivo, portal, str_nf, str_pedido, motivo_crm, transportadora]
+            sheet.append_row(nova_linha)
+            return True
+        except Exception as e:
+            st.error(f"Erro ao gravar: {e}")
+            return False
+    return False
+
+def obter_dia_semana_pt(dt):
+    dias = {0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"}
+    return dias[dt.weekday()]
+
+def obter_data_hora_brasil():
+    fuso_br = pytz.timezone('America/Sao_Paulo')
+    return datetime.now(fuso_br)
 
 def carregar_dados():
     sheet = conectar_google_sheets()
     if sheet:
         try:
             dados = sheet.get_all_records()
-            if dados:
-                return pd.DataFrame(dados)
-            else:
-                return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
-        except Exception as e:
-            st.error(f"Erro ao ler dados da planilha: {e}")
+            if dados: return pd.DataFrame(dados)
+            else: return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
+        except Exception as e: st.error(f"Erro ao ler dados: {e}")
     return pd.DataFrame()
-
-def obter_dia_semana_pt(dt):
-    """Retorna o dia da semana em Português."""
-    dias = {
-        0: "Segunda-feira",
-        1: "Terça-feira",
-        2: "Quarta-feira",
-        3: "Quinta-feira",
-        4: "Sexta-feira",
-        5: "Sábado",
-        6: "Domingo"
-    }
-    return dias[dt.weekday()]
-
-def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
-    sheet = conectar_google_sheets()
-    if sheet:
-        agora = obter_data_hora_brasil()
-        str_nf = str(nf)
-        str_pedido = str(numero_pedido)
-        dia_pt = obter_dia_semana_pt(agora)
-
-        nova_linha = [
-            agora.strftime("%d/%m/%Y"),      
-            agora.strftime("%H:%M:%S"),      
-            dia_pt,                          # Dia em Português
-            setor,
-            colaborador,
-            motivo,
-            portal,
-            str_nf,
-            str_pedido,
-            motivo_crm,
-            transportadora
-        ]
-        try:
-            sheet.append_row(nova_linha)
-            return True
-        except Exception as e:
-            st.error(f"Erro ao gravar no Google Sheets: {e}")
-            return False
-    return False
 
 def converter_para_excel_csv(df):
     df_export = df.copy()
@@ -114,44 +88,39 @@ def converter_para_excel_csv(df):
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
     return df_export.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
-# ==========================================
-#      DADOS E LISTAS
-# ==========================================
+def copiar_para_clipboard(texto):
+    texto_json = json.dumps(texto)
+    js = f"""<script>
+    function copyToClipboard() {{
+        const text = {texto_json};
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {{ document.execCommand('copy'); }} catch (err) {{}}
+        document.body.removeChild(textArea);
+    }}
+    copyToClipboard();
+    </script>"""
+    components.html(js, height=0, width=0)
 
+# ==========================================
+#      DADOS
+# ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla"])
 colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia"])
-
 lista_transportadoras = sorted(["4ELOS", "ATUAL", "BRASIL WEB", "FAVORITA", "FRONTLOG", "GENEROSO", "JADLOG", "LOGAN", "MMA", "PAJUÇARA", "PATRUS", "REBOUÇAS", "REDE SUL", "RIO EXPRESS", "TJB", "TOTAL", "TRILOG"])
-
-lista_portais = sorted([
-    "ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA",
-    "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA",
-    "FAST SHOP", "KABUM", "LEROY - EXTREMA", "MADEIRA MADEIRA", "MAGALU - EXTREMA",
-    "MAGALU ELETRO", "MAGALU INFO", "MARTINS", "MEGA B2B", "MELI OUTLET", "MERCADO LIVRE",
-    "MERCADO LIVRE - EXTREMA", "O MAGAZINE", "PADRÃO", "SHOPEE", "SKYHUB", "TIKTOK",
-    "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"
-])
-
-lista_motivo_crm = sorted([
-    "ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA",
-    "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO",
-    "ATRASO NA ENTREGA", "ATRASO NA EXPEDIÇÃO", "AUSENTE", "AVARIA", "CANCELAMENTO FORÇADO PELO PORTAL",
-    "CASO JURIDÍCO", "CORREÇÃO DE ENDEREÇO", "DEFEITO", "DESCONHECIDO", "DESCONTO",
-    "DEVOLUÇÃO SEM INFORMAÇÃO", "ENDEREÇO NÃO LOCALIZADO", "ENTREGA C/ AVARIA FORÇADA",
-    "ENTREGUE E CANCELADO", "ERRO DE CADASTRO", "ERRO DE EXPEDIÇÃO", "ERRO DE INTEGRAÇÃO DE FATURAMENTO",
-    "ESTOQUE FALTANTE", "EXTRAVIO", "FALTA DE ETIQUETA ENVIAS", "INSUCESSO NA ENTREGA",
-    "ITEM FALTANTE", "MERCADORIA RETIDA", "MUDOU-SE", "NOTA RETIDA", "PAGAMENTO/REEMBOLSO",
-    "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM ABERTURA DE CRM", "SEM RASTREIO", "SUSPEITA DE FRAUDE",
-    "TROCA DE ETIQUETA", "ZONA RURAL"
-])
+lista_portais = sorted(["ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA", "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA", "FAST SHOP", "KABUM", "LEROY - EXTREMA", "MADEIRA MADEIRA", "MAGALU - EXTREMA", "MAGALU ELETRO", "MAGALU INFO", "MARTINS", "MEGA B2B", "MELI OUTLET", "MERCADO LIVRE", "MERCADO LIVRE - EXTREMA", "O MAGAZINE", "PADRÃO", "SHOPEE", "SKYHUB", "TIKTOK", "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"])
+lista_motivo_crm = sorted(["ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA", "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO", "ATRASO NA ENTREGA", "ATRASO NA EXPEDIÇÃO", "AUSENTE", "AVARIA", "CANCELAMENTO FORÇADO PELO PORTAL", "CASO JURIDÍCO", "CORREÇÃO DE ENDEREÇO", "DEFEITO", "DESCONHECIDO", "DESCONTO", "DEVOLUÇÃO SEM INFORMAÇÃO", "ENDEREÇO NÃO LOCALIZADO", "ENTREGA C/ AVARIA FORÇADA", "ENTREGUE E CANCELADO", "ERRO DE CADASTRO", "ERRO DE EXPEDIÇÃO", "ERRO DE INTEGRAÇÃO DE FATURAMENTO", "ESTOQUE FALTANTE", "EXTRAVIO", "FALTA DE ETIQUETA ENVIAS", "INSUCESSO NA ENTREGA", "ITEM FALTANTE", "MERCADORIA RETIDA", "MUDOU-SE", "NOTA RETIDA", "PAGAMENTO/REEMBOLSO", "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM ABERTURA DE CRM", "SEM RASTREIO", "SUSPEITA DE FRAUDE", "TROCA DE ETIQUETA", "ZONA RURAL"])
 
 # ==========================================
-#      SCRIPTS (MENSAGENS PENDÊNCIAS)
+#      MODELOS DE TEXTO
 # ==========================================
 modelos_pendencias = {
-    "ATENDIMENTO DIGISAC": "", 
-    "2° TENTATIVA DE CONTATO": "", 
-    "3° TENTATIVA DE CONTATO": "",
+    "ATENDIMENTO DIGISAC": "", "2° TENTATIVA DE CONTATO": "", "3° TENTATIVA DE CONTATO": "",
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
@@ -166,33 +135,16 @@ modelos_pendencias = {
     "REENVIO DE PRODUTO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
-# ==========================================
-#      SCRIPTS (MENSAGENS SAC)
-# ==========================================
 modelos_sac = {
-    "OUTROS": "", 
-    "RECLAME AQUI": "",
-    "INFORMAÇÃO SOBRE COLETA": "", 
-    "INFORMAÇÃO SOBRE ENTREGA": "", 
-    "INFORMAÇÃO SOBRE O PRODUTO": "", 
-    "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
-    
+    "OUTROS": "", "RECLAME AQUI": "", "INFORMAÇÃO SOBRE COLETA": "", "INFORMAÇÃO SOBRE ENTREGA": "", "INFORMAÇÃO SOBRE O PRODUTO": "", "INFORMAÇÃO SOBRE O REEMBOLSO": "",
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
-    
     "BARRAR ENTREGA NA TRANSPORTADORA": """Olá, (Nome do cliente)!\n\nSolicitamos à transportadora responsável o bloqueio da entrega. No entanto, caso haja alguma tentativa de entrega no local, pedimos a gentileza de recusar o recebimento no ato.\n\nGostaríamos de informar que o pedido de barragem é definitivo. Por questões logísticas, após essa solicitação, não conseguimos reverter o processo para seguir com a entrega novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "ENTREGA RECUSADA": """Olá, (Nome do cliente). Tudo bem?\n\nRecebemos uma notificação da transportadora informando que a entrega do seu pedido foi recusada no endereço de destino.\n\nHouve algum problema na tentativa de entrega ou avaria na embalagem?\n\n· Se deseja receber o produto: Por gentileza, nos confirme o endereço e pontos de referência.\n· Se deseja cancelar: Nos informe por aqui para agilizarmos o processo.\n\nAtenção:\nCaso não tenhamos retorno até {data_limite}, o produto retornará ao nosso estoque e seguiremos com o cancelamento automático.\n\nAguardo seu retorno!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "AGUARDANDO RETORNO (FOLLOW UP)": """Olá, (Nome do cliente).\n\nPassando para informar que seu caso continua sendo tratado como prioridade por nossa equipe.\n\nJá acionamos o setor responsável/transportadora e estamos apenas aguardando a formalização da resposta para lhe posicionar com a solução definitiva. Não se preocupe, estou acompanhando pessoalmente o seu pedido.\n\nAssim que tiver o retorno, entro em contato imediatamente. Obrigado pela paciência!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "PEDIDO EM EXPEDIÇÃO": """Olá, (Nome do cliente).\n\nTrago boas notícias! O seu pedido já foi aprovado e encontra-se atualmente em processo de expedição (separação e embalagem).\n\nEsta etapa garante que tudo chegue perfeito para você e pode levar até 72 horas úteis. Assim que o pacote for coletado pela transportadora, o código de rastreio será gerado e enviado para você acompanhar a rota de entrega.\n\nQualquer dúvida, estou à disposição!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "SOLICITAÇÃO DE BARRAR EXPEDIÇÃO": """Olá, (Nome do cliente).\n\nRecebemos sua solicitação de cancelamento. Informo que já acionei nosso estoque solicitando o bloqueio imediato da expedição do pedido.\n\nEstamos aguardando apenas a confirmação da equipe logística de que o produto não foi coletado. Assim que confirmado, seguiremos com o reembolso conforme nossa política.\n\nTe aviso assim que tiver o "OK" do estoque!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "PEDIDO CANCELADO (ENTREGUE)": """Olá, (Nome do cliente).\n\nNotamos pelo rastreio que o pedido foi entregue com sucesso no dia {data_entrega}.\n\nComo a plataforma Amazon já havia processado o reembolso deste pedido anteriormente, precisamos regularizar a situação. Por uma questão de ética e transparência, gostaríamos de confirmar como prefere prosseguir:\n\n1. Autorizar uma nova cobrança (Retrocharge) e ficar com o produto?\n2. Realizar a devolução do item? (Enviaremos um código de postagem sem custos).\n\nAguardamos seu retorno para finalizar este atendimento.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "PEDIDO CANCELADO (EM TRÂNSITO)": """Olá, (Nome do cliente).\n\nVerificamos que a plataforma já seguiu com o seu reembolso integral.\n\nComo o pedido ainda consta em rota, já solicitamos à transportadora que suspenda a entrega. No entanto, caso o entregador compareça ao seu endereço antes da atualização do sistema, orientamos que recuse o recebimento no ato da entrega.\n\nIsso garantirá que o pacote retorne ao nosso estoque automaticamente, finalizando o processo de forma correta.\n\nAgradecemos a compreensão!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "CANCELAMENTO MARTINS (FRETE)": """Olá, {nome_cliente}!\n\nIdentificamos que, devido à localização de entrega, o valor do frete excedeu o limite operacional permitido para esta transação. Por este motivo, solicitamos a gentileza de seguir com o cancelamento do pedido.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (ESTOQUE)": """Olá, {nome_cliente}!\n\nDevido a uma indisponibilidade pontual em nosso estoque logístico, não conseguiremos processar o envio do seu pedido desta vez. Para evitar maiores transtornos, pedimos que realize o cancelamento da compra.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
     "CANCELAMENTO MARTINS (PREÇO)": """Olá, {nome_cliente}!\n\nIdentificamos uma divergência no valor do produto devido a um erro técnico na transmissão de nossa tabela de precificação. Em razão disso, solicitamos o cancelamento do pedido para que possamos regularizar a situação.\n\nAtenciosamente, {colaborador} | Equipe de Atendimento Engage Eletro.""",
@@ -234,95 +186,73 @@ modelos_sac = {
     "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}"""
 }
 
-# ORDENAÇÃO DE LISTA CORRIGIDA (APÓS DEFINIÇÃO DE MODELOS_SAC)
-lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k != "OUTROS"])
-lista_motivos_contato.append("OUTROS")
+# ORDENAÇÃO DE LISTA
+lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k not in ["OUTROS", "RECLAME AQUI", "INFORMAÇÃO SOBRE COLETA", "INFORMAÇÃO SOBRE ENTREGA", "INFORMAÇÃO SOBRE O PRODUTO", "INFORMAÇÃO SOBRE O REEMBOLSO"]])
+lista_motivos_contato.extend(["INFORMAÇÃO SOBRE COLETA", "INFORMAÇÃO SOBRE ENTREGA", "INFORMAÇÃO SOBRE O PRODUTO", "INFORMAÇÃO SOBRE O REEMBOLSO", "RECLAME AQUI", "OUTROS"])
 
 # ==========================================
-#      FUNÇÕES DE BANCO DE DADOS
-# ==========================================
-def obter_data_hora_brasil():
-    fuso_br = pytz.timezone('America/Sao_Paulo')
-    return datetime.now(fuso_br)
-
-def copiar_para_clipboard(texto):
-    texto_json = json.dumps(texto)
-    js = f"""
-    <script>
-    function copyToClipboard() {{
-        const text = {texto_json};
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {{ document.execCommand('copy'); }} catch (err) {{}}
-        document.body.removeChild(textArea);
-    }}
-    copyToClipboard();
-    </script>
-    """
-    components.html(js, height=0, width=0)
-
-# ==========================================
-#      DESIGN CLEAN
+#           DESIGN
 # ==========================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-    
     .stApp { background-color: #f8fafc !important; font-family: 'Inter', sans-serif; }
     section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
     .stApp, .stApp * { color: #334155 !important; }
     h1, h2, h3, h4, h5, h6 { color: #0f172a !important; font-weight: 700; }
-    
-    .stSelectbox div[data-baseweb="select"] > div, 
-    .stTextInput input, .stDateInput input, .stTextArea textarea {
-        background-color: #ffffff !important; 
-        border: 1px solid #94a3b8 !important; 
-        border-radius: 8px !important; 
-        color: #1e293b !important;
+    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stDateInput input, .stTextArea textarea {
+        background-color: #ffffff !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; color: #1e293b !important;
     }
-    ::placeholder { color: #94a3b8 !important; opacity: 1; }
-
-    .preview-box { 
-        background-color: #f1f5f9 !important; border-left: 5px solid #3b82f6; 
-        border-radius: 4px; padding: 20px; color: #334155 !important; 
-        white-space: pre-wrap; margin-top: 10px; font-size: 14px; 
-    }
-
-    .botao-registrar .stButton button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; 
-        color: white !important; border: none; padding: 0.8rem 2rem; 
-        border-radius: 8px; font-weight: 600; width: 100%; 
-        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
-    }
+    .preview-box { background-color: #f1f5f9 !important; border-left: 5px solid #3b82f6; border-radius: 4px; padding: 20px; color: #334155 !important; white-space: pre-wrap; margin-top: 10px; font-size: 14px; }
+    .botao-registrar .stButton button { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: white !important; border: none; padding: 0.8rem 2rem; border-radius: 8px; font-weight: 600; width: 100%; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
     .botao-registrar .stButton button:hover { transform: translateY(-2px); }
-
     .stDownloadButton button { background-color: #3b82f6 !important; color: white !important; border: none !important; border-radius: 8px; font-weight: 600; width: 100%; }
-    .stDownloadButton button:hover { background-color: #2563eb !important; }
-    
-    div[data-testid="stVerticalBlock"] > div[style*="flex-direction: column;"] > div[data-testid="stVerticalBlock"] { gap: 0rem; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-#           MENU LATERAL
+#           MENU
 # ==========================================
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", width=180)
-    st.sidebar.markdown("##")
-
 st.sidebar.caption("MENU PRINCIPAL")
-pagina_escolhida = st.sidebar.radio(
-    "Navegação:",
-    ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"),
-    label_visibility="collapsed"
-)
+pagina_escolhida = st.sidebar.radio("Navegação:", ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), label_visibility="collapsed")
 st.sidebar.markdown("---")
+
+# ==========================================
+#           CALLBACKS (LÓGICA SEGURA)
+# ==========================================
+def registrar_e_limpar(setor, texto_pronto):
+    # Salva o texto pronto na memória persistente ANTES de limpar os campos
+    sufixo = "_p" if setor == "Pendência" else "_s"
+    st.session_state[f'texto_persistente{sufixo}'] = texto_pronto
+    
+    # Recupera dados do Session State para salvar no Sheets
+    colab = st.session_state.get(f"colab{sufixo}")
+    motivo_opcao = st.session_state.get(f"msg{sufixo}")
+    portal = st.session_state.get(f"portal{sufixo}")
+    nf = st.session_state.get(f"nf{sufixo}")
+    pedido = st.session_state.get(f"ped{sufixo}")
+    crm = st.session_state.get(f"crm{sufixo}")
+    
+    transp = st.session_state.get(f"transp_p") if setor == "Pendência" else st.session_state.get("tr_ent_sac_conf", "-")
+    if setor == "SAC" and transp == "-":
+        transp = st.session_state.get("tr_trans_sac", st.session_state.get("tr_fisc_sac", "-"))
+
+    sucesso = salvar_registro(setor, colab, motivo_opcao, portal, nf, pedido, crm, transp)
+    
+    if sucesso:
+        st.session_state[f'sucesso_recente{sufixo}'] = True
+        
+        # Limpa campos
+        campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
+        if setor == "SAC":
+            campos_para_limpar.extend(["end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
+            
+        for campo in campos_para_limpar:
+            if campo in st.session_state:
+                st.session_state[campo] = ""
 
 # ==========================================
 #           PÁGINA PENDÊNCIAS
@@ -330,28 +260,20 @@ st.sidebar.markdown("---")
 def pagina_pendencias():
     if st.session_state.get('sucesso_recente_p'):
         st.toast("Registrado e Limpo!", icon="✅")
-        st.info("📝 Último texto gerado:")
-        st.code(st.session_state['ultimo_texto_p'], language="text")
-        copiar_para_clipboard(st.session_state['ultimo_texto_p'])
         st.session_state['sucesso_recente_p'] = False
 
     st.title("🚚 Pendências Logísticas")
     st.markdown("---")
-    
     col1, col2 = st.columns([1, 1.5], gap="medium")
-    
     with col1:
         st.subheader("1. Configuração")
         colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
-        
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
         numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_p")
         motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_p")
-        
         transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
-        
         st.markdown("---")
         st.subheader("2. Motivo")
         opcao = st.selectbox("Selecione o caso:", list(modelos_pendencias.keys()), key="msg_p")
@@ -359,29 +281,15 @@ def pagina_pendencias():
     with col2:
         st.subheader("3. Visualização")
         texto_cru = modelos_pendencias[opcao]
-        
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
-        assinatura_nome = colab
-
-        if "AMAZON" in portal:
-            assinatura_nome = ""
-
-        # Substituições Gerais
-        texto_base = texto_cru.replace("{transportadora}", transp)\
-                              .replace("{colaborador}", assinatura_nome)\
-                              .replace("{nome_cliente}", nome_cliente_str)\
-                              .replace("(Nome do cliente)", nome_cliente_str)
-
-        # Regra Via Varejo: Mantém o "Olá"
-        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]:
-             pass 
-
-        motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
+        assinatura_nome = colab if "AMAZON" not in portal else ""
+        texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
+        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
+        motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
         if opcao not in motivos_sem_texto:
             ped_str = numero_pedido if numero_pedido else "..."
             frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
-            
             if "\n" in texto_base:
                 partes = texto_base.split("\n", 1)
                 texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
@@ -391,20 +299,18 @@ def pagina_pendencias():
             texto_final = ""
         
         st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
-        
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
-        if st.button("✅ Registrar e Copiar", key="btn_save_pend"):
-            sucesso = salvar_registro("Pendência", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp)
-            if sucesso:
-                st.session_state['ultimo_texto_p'] = texto_final
-                st.session_state['sucesso_recente_p'] = True
-                
-                # LIMPEZA AUTOMÁTICA
-                for k in ["cliente_p", "nf_p", "ped_p"]:
-                    if k in st.session_state: st.session_state[k] = ""
-                st.rerun()
+        
+        # Passa o texto_final calculado como argumento
+        st.button("✅ Registrar e Copiar", key="btn_save_pend", on_click=registrar_e_limpar, args=("Pendência", texto_final))
         st.markdown('</div>', unsafe_allow_html=True)
+
+        if 'texto_persistente_p' in st.session_state:
+            st.markdown("---")
+            st.info("📝 Último texto registrado (Cópia Segura):")
+            st.code(st.session_state['texto_persistente_p'], language="text")
+            copiar_para_clipboard(st.session_state['texto_persistente_p'])
 
 # ==========================================
 #           PÁGINA SAC
@@ -412,32 +318,23 @@ def pagina_pendencias():
 def pagina_sac():
     if st.session_state.get('sucesso_recente_s'):
         st.toast("Registrado e Limpo!", icon="✅")
-        st.info("📝 Último texto gerado:")
-        st.code(st.session_state['ultimo_texto_s'], language="text")
-        copiar_para_clipboard(st.session_state['ultimo_texto_s'])
         st.session_state['sucesso_recente_s'] = False
 
     st.title("🎧 SAC / Atendimento")
     st.markdown("---")
-    
     col1, col2 = st.columns([1, 1.5], gap="medium")
     dados = {}
-    
     with col1:
         st.subheader("1. Configuração Obrigatória")
-        
         colab = st.selectbox("👤 Colaborador:", colaboradores_sac, key="colab_s")
         nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_s")
         portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_s")
         nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_s")
         numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_s")
         motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_s")
-        
         st.markdown("---")
-        
         opcao = st.selectbox("💬 Qual o motivo do contato?", lista_motivos_contato, key="msg_s")
         
-        # === CORREÇÃO DOS ERROS DE ID (Adicionei key= em todos) ===
         op_upper = opcao.upper()
         if "SOLICITAÇÃO DE COLETA" in op_upper:
             st.info("🚚 Endereço")
@@ -448,7 +345,6 @@ def pagina_sac():
             dados["{contato_assistencia}"] = st.text_area("Endereço/Telefone/Infos:", key="cont_assist_in_7")
         elif "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)" in op_upper:
             st.info("📅 Dados da Compra")
-            # --- Correção do ID Duplicado Aqui ---
             dados["{data_compra}"] = st.text_input("Data da Compra:", key="data_comp_out_7")
             dados["{nota_fiscal}"] = st.text_input("Número da NF (Repetir se necessário):", key="nf_out_7")
             dados["{link_posto}"] = st.text_input("Link do Posto Autorizado:", key="link_out_7")
@@ -523,10 +419,8 @@ def pagina_sac():
             else:
                 texto_final = f"{frase_pedido}\n\n{texto_base}"
         elif opcao == "BARRAR ENTREGA NA TRANSPORTADORA":
-             # Lógica "Raw" para evitar IndexError
              raw_text = modelos_sac["BARRAR ENTREGA NA TRANSPORTADORA"]
              corpo_mensagem = raw_text.replace("Olá, (Nome do cliente)!", "").strip()
-             
              ped_str = numero_pedido if numero_pedido else "......"
              texto_final = f"Olá, {nome_cliente_str}!\nO atendimento é referente ao seu pedido de número {ped_str}\n\n{corpo_mensagem}"
         elif opcao in scripts_martins:
@@ -545,19 +439,15 @@ def pagina_sac():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         
-        transp_usada = dados.get("{transportadora}", "-")
-        if st.button("✅ Registrar e Copiar", key="btn_save_sac"):
-            sucesso = salvar_registro("SAC", colab, opcao, portal, nota_fiscal, numero_pedido, motivo_crm, transp_usada)
-            if sucesso:
-                st.session_state['ultimo_texto_s'] = texto_final
-                st.session_state['sucesso_recente_s'] = True
-                
-                # LIMPEZA AUTOMÁTICA
-                keys_clean = ["cliente_s", "nf_s", "ped_s", "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"]
-                for k in keys_clean:
-                    if k in st.session_state: st.session_state[k] = ""
-                st.rerun()
+        # Passa o texto_final (JÁ preenchido) para o callback
+        st.button("✅ Registrar e Copiar", key="btn_save_sac", on_click=registrar_e_limpar, args=("SAC", texto_final))
         st.markdown('</div>', unsafe_allow_html=True)
+
+        if 'texto_persistente_s' in st.session_state:
+            st.markdown("---")
+            st.info("📝 Último texto registrado (Cópia Segura):")
+            st.code(st.session_state['texto_persistente_s'], language="text")
+            copiar_para_clipboard(st.session_state['texto_persistente_s'])
 
 # ==========================================
 #           DASHBOARD
