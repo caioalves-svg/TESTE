@@ -48,15 +48,32 @@ def conectar_google_sheets():
         st.error(f"Erro de Conexão: {e}")
         return None
 
-def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
+def carregar_dados():
     sheet = conectar_google_sheets()
     if sheet:
         try:
-            agora = obter_data_hora_brasil()
-            str_nf = str(nf)
-            str_pedido = str(numero_pedido)
-            dia_pt = obter_dia_semana_pt(agora)
-            nova_linha = [agora.strftime("%d/%m/%Y"), agora.strftime("%H:%M:%S"), dia_pt, setor, colaborador, motivo, portal, str_nf, str_pedido, motivo_crm, transportadora]
+            dados = sheet.get_all_records()
+            if dados:
+                return pd.DataFrame(dados)
+            else:
+                return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
+        except Exception as e:
+            st.error(f"Erro ao ler dados: {e}")
+    return pd.DataFrame()
+
+def obter_dia_semana_pt(dt):
+    dias = {0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"}
+    return dias[dt.weekday()]
+
+def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motivo_crm, transportadora="-"):
+    sheet = conectar_google_sheets()
+    if sheet:
+        agora = obter_data_hora_brasil()
+        str_nf = str(nf)
+        str_pedido = str(numero_pedido)
+        dia_pt = obter_dia_semana_pt(agora)
+        nova_linha = [agora.strftime("%d/%m/%Y"), agora.strftime("%H:%M:%S"), dia_pt, setor, colaborador, motivo, portal, str_nf, str_pedido, motivo_crm, transportadora]
+        try:
             sheet.append_row(nova_linha)
             return True
         except Exception as e:
@@ -64,29 +81,15 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
-def obter_dia_semana_pt(dt):
-    dias = {0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"}
-    return dias[dt.weekday()]
-
-def obter_data_hora_brasil():
-    fuso_br = pytz.timezone('America/Sao_Paulo')
-    return datetime.now(fuso_br)
-
-def carregar_dados():
-    sheet = conectar_google_sheets()
-    if sheet:
-        try:
-            dados = sheet.get_all_records()
-            if dados: return pd.DataFrame(dados)
-            else: return pd.DataFrame(columns=["Data", "Hora", "Dia_Semana", "Setor", "Colaborador", "Motivo", "Portal", "Nota_Fiscal", "Numero_Pedido", "Motivo_CRM", "Transportadora"])
-        except Exception as e: st.error(f"Erro ao ler dados: {e}")
-    return pd.DataFrame()
-
 def converter_para_excel_csv(df):
     df_export = df.copy()
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
     return df_export.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
+
+def obter_data_hora_brasil():
+    fuso_br = pytz.timezone('America/Sao_Paulo')
+    return datetime.now(fuso_br)
 
 def copiar_para_clipboard(texto):
     texto_json = json.dumps(texto)
@@ -108,21 +111,30 @@ def copiar_para_clipboard(texto):
     components.html(js, height=0, width=0)
 
 # ==========================================
-#      DADOS
+#      DADOS E LISTAS
 # ==========================================
-colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla"])
-colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia"])
+colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
+colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa"])
 lista_transportadoras = sorted(["4ELOS", "ATUAL", "BRASIL WEB", "FAVORITA", "FRONTLOG", "GENEROSO", "JADLOG", "LOGAN", "MMA", "PAJUÇARA", "PATRUS", "REBOUÇAS", "REDE SUL", "RIO EXPRESS", "TJB", "TOTAL", "TRILOG"])
 lista_portais = sorted(["ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA", "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA", "FAST SHOP", "KABUM", "LEROY - EXTREMA", "MADEIRA MADEIRA", "MAGALU - EXTREMA", "MAGALU ELETRO", "MAGALU INFO", "MARTINS", "MEGA B2B", "MELI OUTLET", "MERCADO LIVRE", "MERCADO LIVRE - EXTREMA", "O MAGAZINE", "PADRÃO", "SHOPEE", "SKYHUB", "TIKTOK", "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"])
 lista_motivo_crm = sorted(["ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA", "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO", "ATRASO NA ENTREGA", "ATRASO NA EXPEDIÇÃO", "AUSENTE", "AVARIA", "CANCELAMENTO FORÇADO PELO PORTAL", "CASO JURIDÍCO", "CORREÇÃO DE ENDEREÇO", "DEFEITO", "DESCONHECIDO", "DESCONTO", "DEVOLUÇÃO SEM INFORMAÇÃO", "ENDEREÇO NÃO LOCALIZADO", "ENTREGA C/ AVARIA FORÇADA", "ENTREGUE E CANCELADO", "ERRO DE CADASTRO", "ERRO DE EXPEDIÇÃO", "ERRO DE INTEGRAÇÃO DE FATURAMENTO", "ESTOQUE FALTANTE", "EXTRAVIO", "FALTA DE ETIQUETA ENVIAS", "INSUCESSO NA ENTREGA", "ITEM FALTANTE", "MERCADORIA RETIDA", "MUDOU-SE", "NOTA RETIDA", "PAGAMENTO/REEMBOLSO", "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM ABERTURA DE CRM", "SEM RASTREIO", "SUSPEITA DE FRAUDE", "TROCA DE ETIQUETA", "ZONA RURAL"])
 
 # ==========================================
-#      MODELOS DE TEXTO
+#      SCRIPTS PENDÊNCIAS
 # ==========================================
 modelos_pendencias = {
     "ATENDIMENTO DIGISAC": "", "2° TENTATIVA DE CONTATO": "", "3° TENTATIVA DE CONTATO": "",
+    "REENTREGA": "", "AGUARDANDO TRANSPORTADORA": "",
+    
+    "ACAREAÇÃO": """Olá, (Nome do cliente)! Tudo bem?\n\nIdentificamos uma divergência na entrega do seu pedido e, por isso, abrimos um chamado de acareação com a transportadora.\n\nNeste procedimento, o motorista retorna ao local para identificar quem recebeu a mercadoria e validar as informações fornecidas. O prazo para a conclusão desta análise é de até 7 dias úteis.\n\nAssim que tivermos o parecer final, entraremos em contato imediatamente com a resolução.\n\nAtenciosamente,\n{colaborador}""",
+    
+    "DEVOLUÇÃO INDEVIDA": """Olá, (Nome do cliente)! Tudo bem?\n\nLamentamos informar que o seu pedido retornou indevidamente ao nosso centro de distribuição por um erro operacional.\n\nPara resolvermos da melhor forma para você, como prefere seguir?\n\nReenvio: Geramos um novo envio prioritário da sua mercadoria.\nCancelamento: Realizamos o estorno integral do valor pago.\n\nPedimos sinceras desculpas pelo transtorno. Ficamos no aguardo da sua escolha para prosseguir.\n\nAtenciosamente,\n{colaborador}""",
+    
+    "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem?\n\nQueremos garantir que sua mercadoria chegue com agilidade e sem novos desencontros.\n\nPor gentileza, você poderia nos informar um número de telefone atualizado (com DDD)? Assim, podemos alinhar os detalhes diretamente com a transportadora e facilitar o acesso ao seu endereço.\n\nAguardamos seu retorno!\n\nAtenciosamente,\n{colaborador}""",
+    
+    "EXTRAVIO / AVARIA (SEM ESTOQUE)": """Olá, (Nome do cliente)! Tudo bem?\n\nDurante o transporte, fomos notificados de que sua mercadoria sofreu um imprevisto (extravio/avaria). Infelizmente, verificamos que este item não está mais disponível em nosso estoque para reposição imediata.\n\nDevido a isso, seguiremos com o cancelamento da compra e o reembolso total do valor.\n\nSentimos muito por não conseguir entregar o seu produto desta vez e pedimos desculpas por qualquer frustração causada. Se houver algo mais que possamos fazer, estamos à disposição.\n\nAtenciosamente,\n{colaborador}""",
+
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
-    "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nPara facilitar a entrega da sua mercadoria e não ter desencontros com a transportadora {transportadora}, o senhor pode por gentileza nos enviar um número de telefone ativo para alinharmos a entrega?\n\nAguardo o retorno!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
     "ÁREA DE RISCO": """Olá, (Nome do cliente)! Tudo bem? Espero que sim!\n\nA transportadora {transportadora}, informou que está com dificuldades para realizar a entrega no endereço cadastrado no portal. Dessa forma, peço por gentileza que nos informe um endereço alternativo e também telefones ativos para melhor comunicação.\n\nCaso não possua um outro endereço, sua mercadoria ficará disponível para retirada da base da transportadora.\n\nQualquer dúvida me coloco à disposição para ajudá-lo!\n\nAtenciosamente,\n{colaborador}""",
     "EXTRAVIO / AVARIA": """Olá, (Nome do cliente)! Tudo bem? Espero que sim!\n\nInfelizmente fomos informados pela transportadora {transportadora} que sua mercadoria foi furtada/avariada em transporte. Antes de tudo, pedimos desculpas pelo ocorrido e por todo transtorno causado.\n\nGostaríamos de saber se o senhor aceita o envio de uma nova mercadoria? O prazo para entrega é de 5 a 7 dias úteis, podendo ocorrer antes.\n\nNovamente, pedimos desculpas. Qualquer dúvida me coloco à disposição para ajudá-lo!\n\nAtenciosamente,\n{colaborador}""",
@@ -135,9 +147,15 @@ modelos_pendencias = {
     "REENVIO DE PRODUTO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nConforme solicitado, realizamos o envio de um novo produto ao senhor. Em até 48h você terá acesso a sua nova nota fiscal e poderá acompanhar os passos de sua entrega:\n\nLink: https://ssw.inf.br/2/rastreamento_pf?\n(Necessário inserir o CPF)\n\nNovamente peço desculpas por todo transtorno causado.\n\nAtenciosamente,\n{colaborador}"""
 }
 
+# ==========================================
+#      SCRIPTS SAC
+# ==========================================
 modelos_sac = {
     "OUTROS": "", "RECLAME AQUI": "", "INFORMAÇÃO SOBRE COLETA": "", "INFORMAÇÃO SOBRE ENTREGA": "", "INFORMAÇÃO SOBRE O PRODUTO": "", "INFORMAÇÃO SOBRE O REEMBOLSO": "",
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
+    
+    "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)": """Olá, (Nome do cliente)!\n\nPodemos verificar a possibilidade de alteração de endereço desde que não haja uma mudança referente a CIDADE ou ESTADO. Gentileza encaminhar o endereço completo no formato abaixo:\n\nRua:\nCep:\nNúmero:\nBairro:\nCidade:\nEstado:\nComplemento:\nPonto de Referência:\n2 telefones ativos:\n\nApós o envio dos dados, estaremos gerando uma Carta de Correção de Endereço e encaminhando para a transportadora para verificamos a possibilidade de entrega no local indicado.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+
     "BARRAR ENTREGA NA TRANSPORTADORA": """Olá, (Nome do cliente)!\n\nSolicitamos à transportadora responsável o bloqueio da entrega. No entanto, caso haja alguma tentativa de entrega no local, pedimos a gentileza de recusar o recebimento no ato.\n\nGostaríamos de informar que o pedido de barragem é definitivo. Por questões logísticas, após essa solicitação, não conseguimos reverter o processo para seguir com a entrega novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ENTREGA RECUSADA": """Olá, (Nome do cliente). Tudo bem?\n\nRecebemos uma notificação da transportadora informando que a entrega do seu pedido foi recusada no endereço de destino.\n\nHouve algum problema na tentativa de entrega ou avaria na embalagem?\n\n· Se deseja receber o produto: Por gentileza, nos confirme o endereço e pontos de referência.\n· Se deseja cancelar: Nos informe por aqui para agilizarmos o processo.\n\nAtenção:\nCaso não tenhamos retorno até {data_limite}, o produto retornará ao nosso estoque e seguiremos com o cancelamento automático.\n\nAguardo seu retorno!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGUARDANDO RETORNO (FOLLOW UP)": """Olá, (Nome do cliente).\n\nPassando para informar que seu caso continua sendo tratado como prioridade por nossa equipe.\n\nJá acionamos o setor responsável/transportadora e estamos apenas aguardando a formalização da resposta para lhe posicionar com a solução definitiva. Não se preocupe, estou acompanhando pessoalmente o seu pedido.\n\nAssim que tiver o retorno, entro em contato imediatamente. Obrigado pela paciência!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -286,7 +304,9 @@ def pagina_pendencias():
         texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
-        motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO"]
+        # ATUALIZADO: Inclui os novos motivos sem texto
+        motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO", "REENTREGA", "AGUARDANDO TRANSPORTADORA"]
+        
         if opcao not in motivos_sem_texto:
             ped_str = numero_pedido if numero_pedido else "..."
             frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
@@ -407,7 +427,7 @@ def pagina_sac():
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
-        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA"] + lista_livre_escrita
+        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)"] + lista_livre_escrita
         scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in excecoes_nf and opcao not in scripts_martins:
@@ -420,6 +440,11 @@ def pagina_sac():
                 texto_final = f"{frase_pedido}\n\n{texto_base}"
         elif opcao == "BARRAR ENTREGA NA TRANSPORTADORA":
              raw_text = modelos_sac["BARRAR ENTREGA NA TRANSPORTADORA"]
+             corpo_mensagem = raw_text.replace("Olá, (Nome do cliente)!", "").strip()
+             ped_str = numero_pedido if numero_pedido else "......"
+             texto_final = f"Olá, {nome_cliente_str}!\nO atendimento é referente ao seu pedido de número {ped_str}\n\n{corpo_mensagem}"
+        elif opcao == "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)":
+             raw_text = modelos_sac["ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)"]
              corpo_mensagem = raw_text.replace("Olá, (Nome do cliente)!", "").strip()
              ped_str = numero_pedido if numero_pedido else "......"
              texto_final = f"Olá, {nome_cliente_str}!\nO atendimento é referente ao seu pedido de número {ped_str}\n\n{corpo_mensagem}"
