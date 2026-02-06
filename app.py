@@ -157,9 +157,8 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE ENTREGA": "", 
     "INFORMAÇÃO SOBRE O PRODUTO": "", 
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
-    "COMPROVANTE DE ENTREGA (MARTINS)": "",
+    "COMPROVANTE DE ENTREGA (MARTINS)": "", # Novo (apenas registro)
 
-    # AQUI O {portal} SERÁ SUBSTITUÍDO PELO VALOR SELECIONADO NA CAIXA "PORTAL"
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
@@ -314,6 +313,7 @@ def pagina_pendencias():
         texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
+        # ATUALIZADO: Inclui os novos motivos sem texto
         motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO", "REENTREGA", "AGUARDANDO TRANSPORTADORA"]
         
         if opcao not in motivos_sem_texto:
@@ -331,6 +331,7 @@ def pagina_pendencias():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         
+        # Passa o texto_final calculado como argumento
         st.button("✅ Registrar e Copiar", key="btn_save_pend", on_click=registrar_e_limpar, args=("Pendência", texto_final))
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -476,6 +477,7 @@ def pagina_sac():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         
+        # Passa o texto_final (JÁ preenchido) para o callback
         st.button("✅ Registrar e Copiar", key="btn_save_sac", on_click=registrar_e_limpar, args=("SAC", texto_final))
         st.markdown('</div>', unsafe_allow_html=True)
 
