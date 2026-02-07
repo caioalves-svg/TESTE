@@ -81,8 +81,13 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
+# --- CORREÇÃO DO ERRO DE DOWNLOAD AQUI ---
+@st.cache_data(show_spinner=False)
 def converter_para_excel_csv(df):
     df_export = df.copy()
+    # Remove colunas internas que causam erro de serialização no download
+    df_export = df_export.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore')
+    
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
     return df_export.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
@@ -114,7 +119,13 @@ def copiar_para_clipboard(texto):
 #      DADOS E LISTAS
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
-colaboradores_sac = sorted(["Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa"])
+
+# ATUALIZADO COM OS NOVOS NOMES
+colaboradores_sac = sorted([
+    "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
+    "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
+])
+
 lista_transportadoras = sorted(["4ELOS", "ATUAL", "BRASIL WEB", "FAVORITA", "FRONTLOG", "GENEROSO", "JADLOG", "LOGAN", "MMA", "PAJUÇARA", "PATRUS", "REBOUÇAS", "REDE SUL", "RIO EXPRESS", "TJB", "TOTAL", "TRILOG"])
 lista_portais = sorted(["ALIEXPRESS", "AMAZON - EXTREMA", "AMAZON | ENGAGE LOG", "AMAZON DBA", "AMERICANAS - EXTREMA", "B2W", "BRADESCO SHOP", "CARREFOUR", "CARREFOUR OUTLET", "CNOVA", "CNOVA - EXTREMA", "FAST SHOP", "KABUM", "LEROY - EXTREMA", "MADEIRA MADEIRA", "MAGALU - EXTREMA", "MAGALU ELETRO", "MAGALU INFO", "MARTINS", "MEGA B2B", "MELI OUTLET", "MERCADO LIVRE", "MERCADO LIVRE - EXTREMA", "O MAGAZINE", "PADRÃO", "SHOPEE", "SKYHUB", "TIKTOK", "WAPSTORE - ENGAGE", "WEBCONTINENTAL", "WINECOM - LOJA INTEGRADA", "ZEMA"])
 lista_motivo_crm = sorted(["ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA FISCAL", "AREA DE RISCO", "AREA NÃO ATENDIDA", "ARREPENDIMENTO", "ARREPENDIMENTO - DEVOLUÇÃO AMAZON", "ARREPENDIMENTO POR QUALIDADE DO PRODUTO", "ATRASO NA ENTREGA", "ATRASO NA EXPEDIÇÃO", "AUSENTE", "AVARIA", "CANCELAMENTO FORÇADO PELO PORTAL", "CASO JURIDÍCO", "CORREÇÃO DE ENDEREÇO", "DEFEITO", "DESCONHECIDO", "DESCONTO", "DEVOLUÇÃO SEM INFORMAÇÃO", "ENDEREÇO NÃO LOCALIZADO", "ENTREGA C/ AVARIA FORÇADA", "ENTREGUE E CANCELADO", "ERRO DE CADASTRO", "ERRO DE EXPEDIÇÃO", "ERRO DE INTEGRAÇÃO DE FATURAMENTO", "ESTOQUE FALTANTE", "EXTRAVIO", "FALTA DE ETIQUETA ENVIAS", "INSUCESSO NA ENTREGA", "ITEM FALTANTE", "MERCADORIA RETIDA", "MUDOU-SE", "NOTA RETIDA", "PAGAMENTO/REEMBOLSO", "RECOBRANÇA DE CLIENTE", "RECUSA", "RETENÇÃO", "SEM ABERTURA DE CRM", "SEM RASTREIO", "SUSPEITA DE FRAUDE", "TROCA DE ETIQUETA", "ZONA RURAL"])
@@ -157,7 +168,11 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE ENTREGA": "", 
     "INFORMAÇÃO SOBRE O PRODUTO": "", 
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
-    "COMPROVANTE DE ENTREGA (MARTINS)": "", # Novo (apenas registro)
+    "COMPROVANTE DE ENTREGA (MARTINS)": "", 
+    
+    "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+
+    "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
@@ -213,9 +228,9 @@ modelos_sac = {
     "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}"""
 }
 
-# ORDENAÇÃO DE LISTA
-lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k not in ["OUTROS", "RECLAME AQUI", "INFORMAÇÃO SOBRE COLETA", "INFORMAÇÃO SOBRE ENTREGA", "INFORMAÇÃO SOBRE O PRODUTO", "INFORMAÇÃO SOBRE O REEMBOLSO", "COMPROVANTE DE ENTREGA (MARTINS)"]])
-lista_motivos_contato.extend(["INFORMAÇÃO SOBRE COLETA", "INFORMAÇÃO SOBRE ENTREGA", "INFORMAÇÃO SOBRE O PRODUTO", "INFORMAÇÃO SOBRE O REEMBOLSO", "RECLAME AQUI", "COMPROVANTE DE ENTREGA (MARTINS)", "OUTROS"])
+# ORDENAÇÃO DE LISTA: Alfabética com exceção do 'OUTROS' que fica por último
+lista_motivos_contato = sorted([k for k in modelos_sac.keys() if k != "OUTROS"])
+lista_motivos_contato.append("OUTROS")
 
 # ==========================================
 #           DESIGN
@@ -303,7 +318,7 @@ def pagina_pendencias():
         transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
         st.markdown("---")
         st.subheader("2. Motivo")
-        opcao = st.selectbox("Selecione o caso:", list(modelos_pendencias.keys()), key="msg_p")
+        opcao = st.selectbox("Selecione o caso:", sorted(list(modelos_pendencias.keys())), key="msg_p")
 
     with col2:
         st.subheader("3. Visualização")
@@ -436,7 +451,7 @@ def pagina_sac():
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
-        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)"] + lista_livre_escrita
+        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)", "PEDIDO AMAZON FBA", "BAIXA ERRÔNEA"] + lista_livre_escrita
         scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in excecoes_nf and opcao not in scripts_martins:
@@ -458,7 +473,6 @@ def pagina_sac():
              ped_str = numero_pedido if numero_pedido else "......"
              texto_final = f"Olá, {nome_cliente_str}!\nO atendimento é referente ao seu pedido de número {ped_str}\n\n{corpo_mensagem}"
         elif opcao == "ESTOQUE FALTANTE":
-             # Substitui {portal} pelo valor do portal
              texto_final = texto_base.replace("{portal}", str(portal))
         elif opcao == "COMPROVANTE DE ENTREGA (MARTINS)":
              texto_final = ""
@@ -582,7 +596,10 @@ def pagina_dashboard():
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
-        st.download_button(label="Baixar CSV", data=converter_para_excel_csv(df_f), file_name="relatorio_engage.csv", mime='text/csv')
+        # Correção aplicada: variável gerada antes do botão
+        csv_dados = converter_para_excel_csv(df_f)
+        st.download_button(label="Baixar CSV", data=csv_dados, file_name="relatorio_engage.csv", mime='text/csv')
+        
         df_display = df_f.sort_values(by=["Data_Filtro", "Hora"], ascending=False).head(50)
         st.dataframe(df_display.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore'), use_container_width=True, hide_index=True)
 
