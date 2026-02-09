@@ -81,13 +81,11 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
-# --- CORREÇÃO DO ERRO DE DOWNLOAD (CACHE) ---
+# --- FUNÇÃO COM CACHE PARA EVITAR ERRO DE DOWNLOAD ---
 @st.cache_data(show_spinner=False)
 def converter_para_excel_csv(df):
     df_export = df.copy()
-    # Remove colunas internas de filtro se existirem para evitar erro de serialização
     df_export = df_export.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore')
-    
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
     df_export['Numero_Pedido'] = df_export['Numero_Pedido'].astype(str)
     return df_export.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
@@ -120,7 +118,6 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
-# LISTA ATUALIZADA
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -170,7 +167,6 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
     "COMPROVANTE DE ENTREGA (MARTINS)": "", 
     
-    # --- NOVOS MOTIVOS ADICIONADOS ---
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -178,7 +174,6 @@ modelos_sac = {
     "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    # ---------------------------------
 
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
@@ -295,8 +290,10 @@ def registrar_e_limpar(setor, texto_pronto):
         
         # Limpa campos
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
+        if setor == "Pendência":
+            campos_para_limpar.extend(["crm_p", "transp_p"])
         if setor == "SAC":
-            campos_para_limpar.extend(["end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
+            campos_para_limpar.extend(["crm_s", "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
             
         for campo in campos_para_limpar:
             if campo in st.session_state:
@@ -331,7 +328,7 @@ def pagina_pendencias():
         texto_cru = modelos_pendencias[opcao]
         nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
         assinatura_nome = colab if "AMAZON" not in portal else ""
-        texto_base = texto_cru.replace("{transportadora}", transp).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
+        texto_base = texto_cru.replace("{transportadora}", str(transp)).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
         # ATUALIZADO: Inclui os novos motivos sem texto
@@ -512,7 +509,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial")
+    st.title("📊 Dashboard Gerencial (Nuvem)")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
@@ -603,7 +600,10 @@ def pagina_dashboard():
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
-        st.download_button(label="Baixar CSV", data=converter_para_excel_csv(df_f), file_name="relatorio_engage.csv", mime='text/csv')
+        # Correção aplicada: variável gerada antes do botão
+        csv_dados = converter_para_excel_csv(df_f)
+        st.download_button(label="Baixar CSV", data=csv_dados, file_name="relatorio_engage.csv", mime='text/csv')
+        
         df_display = df_f.sort_values(by=["Data_Filtro", "Hora"], ascending=False).head(50)
         st.dataframe(df_display.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore'), use_container_width=True, hide_index=True)
 
