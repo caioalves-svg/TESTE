@@ -81,11 +81,11 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
-# --- CORREÇÃO DO ERRO DE DOWNLOAD AQUI ---
+# --- CORREÇÃO DO ERRO DE DOWNLOAD (CACHE) ---
 @st.cache_data(show_spinner=False)
 def converter_para_excel_csv(df):
     df_export = df.copy()
-    # Remove colunas internas que causam erro de serialização no download
+    # Remove colunas internas de filtro se existirem para evitar erro de serialização
     df_export = df_export.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore')
     
     df_export['Nota_Fiscal'] = df_export['Nota_Fiscal'].astype(str)
@@ -120,7 +120,7 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
-# ATUALIZADO COM OS NOVOS NOMES
+# LISTA ATUALIZADA
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -170,9 +170,15 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
     "COMPROVANTE DE ENTREGA (MARTINS)": "", 
     
+    # --- NOVOS MOTIVOS ADICIONADOS ---
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
+    "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+
+    "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+
     "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    # ---------------------------------
 
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
@@ -451,7 +457,7 @@ def pagina_sac():
         texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
         if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
         
-        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)", "PEDIDO AMAZON FBA", "BAIXA ERRÔNEA"] + lista_livre_escrita
+        excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)", "PEDIDO AMAZON FBA", "BAIXA ERRÔNEA", "COBRANÇA INDEVIDA", "INFORMAÇÃO EMBALAGEM"] + lista_livre_escrita
         scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
         
         if opcao not in excecoes_nf and opcao not in scripts_martins:
@@ -506,7 +512,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial (Nuvem)")
+    st.title("📊 Dashboard Gerencial")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
@@ -557,28 +563,29 @@ def pagina_dashboard():
         k3.metric("Pendências", len(df_f[df_f["Setor"] == "Pendência"]), border=True)
 
         st.markdown("##")
-        c1, c2 = st.columns(2)
         
-        with c1:
-            st.subheader("📈 Tendência Diária")
-            trend = df_f.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
-            fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, title="Volume Diário", line_shape="spline", color_discrete_sequence=['#10b981'], text='Atendimentos')
-            fig.update_traces(textposition="top center")
-            fig.update_xaxes(tickformat="%d/%m", dtick="D1")
-            st.plotly_chart(fig, use_container_width=True)
+        # === GRÁFICOS UM EMBAIXO DO OUTRO ===
+        st.subheader("📈 Tendência Diária")
+        trend = df_f.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
+        fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, title="Volume Diário", line_shape="spline", color_discrete_sequence=['#10b981'], text='Atendimentos')
+        fig.update_traces(textposition="top center")
+        fig.update_xaxes(tickformat="%d/%m", dtick="D1")
+        st.plotly_chart(fig, use_container_width=True)
 
-        with c2:
-            st.subheader("⏰ Picos de Demanda (Horário)")
-            df_f['Hora_Int'] = pd.to_datetime(df_f['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
-            total_sec = df_f.groupby('Setor').size().reset_index(name='Total_Setor')
-            heat = df_f.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
-            heat = pd.merge(heat, total_sec, on='Setor')
-            heat['Pct'] = (heat['Atendimentos'] / heat['Total_Setor']) * 100
-            
-            fig = px.line(heat, x='Hora_Int', y='Pct', title="Volume por Faixa Horária (% do Setor)", labels={'Hora_Int': 'Hora', 'Pct': '%'}, color='Setor', markers=True, text='Pct', color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'})
-            fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center')
-            fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
-            st.plotly_chart(fig, use_container_width=True)
+        st.markdown("---")
+
+        st.subheader("⏰ Picos de Demanda (Horário)")
+        df_f['Hora_Int'] = pd.to_datetime(df_f['Hora'], format='%H:%M:%S', errors='coerce').dt.hour
+        total_sec = df_f.groupby('Setor').size().reset_index(name='Total_Setor')
+        heat = df_f.groupby(['Hora_Int', 'Setor']).size().reset_index(name='Atendimentos')
+        heat = pd.merge(heat, total_sec, on='Setor')
+        heat['Pct'] = (heat['Atendimentos'] / heat['Total_Setor']) * 100
+        
+        fig = px.line(heat, x='Hora_Int', y='Pct', title="Volume por Faixa Horária (% do Setor)", labels={'Hora_Int': 'Hora', 'Pct': '%'}, color='Setor', markers=True, text='Pct', color_discrete_map={'Pendência': '#3b82f6', 'SAC': '#10b981'})
+        fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center')
+        fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
+        st.plotly_chart(fig, use_container_width=True)
+        # =======================================
 
         st.markdown("---")
         st.subheader("📊 Motivos CRM")
@@ -596,10 +603,7 @@ def pagina_dashboard():
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
-        # Correção aplicada: variável gerada antes do botão
-        csv_dados = converter_para_excel_csv(df_f)
-        st.download_button(label="Baixar CSV", data=csv_dados, file_name="relatorio_engage.csv", mime='text/csv')
-        
+        st.download_button(label="Baixar CSV", data=converter_para_excel_csv(df_f), file_name="relatorio_engage.csv", mime='text/csv')
         df_display = df_f.sort_values(by=["Data_Filtro", "Hora"], ascending=False).head(50)
         st.dataframe(df_display.drop(columns=["Data_Filtro", "Hora_Int"], errors='ignore'), use_container_width=True, hide_index=True)
 
