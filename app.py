@@ -118,6 +118,7 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
+# LISTA COMPLETA SAC
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -290,14 +291,12 @@ def registrar_e_limpar(setor, texto_pronto):
         
         # Limpa campos
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
-        if setor == "Pendência":
-            campos_para_limpar.extend(["crm_p", "transp_p"])
         if setor == "SAC":
-            campos_para_limpar.extend(["crm_s", "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
+            campos_para_limpar.extend(["end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
             
         for campo in campos_para_limpar:
             if campo in st.session_state:
-                del st.session_state[campo]
+                st.session_state[campo] = ""
 
 # ==========================================
 #           PÁGINA PENDÊNCIAS
@@ -509,7 +508,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial (Nuvem)")
+    st.title("📊 Dashboard Gerencial")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
