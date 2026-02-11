@@ -118,6 +118,7 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
+# LISTA COMPLETA SAC
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -286,7 +287,7 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # Limpa campos definindo como string vazia para atualizar a interface
+        # Limpa campos
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         if setor == "Pendência":
             campos_para_limpar.extend(["crm_p", "transp_p"])
@@ -313,7 +314,6 @@ def pagina_pendencias():
     st.markdown("---")
 
     if tipo_fluxo == "Pendência":
-        # Fluxo Original
         col1, col2 = st.columns([1, 1.5], gap="medium")
         with col1:
             st.subheader("1. Configuração")
@@ -352,6 +352,7 @@ def pagina_pendencias():
             st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
             st.write("")
             st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
+            
             st.button("✅ Registrar e Copiar", key="btn_save_pend", on_click=registrar_e_limpar, args=("Pendência", texto_final))
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -363,43 +364,39 @@ def pagina_pendencias():
 
     elif tipo_fluxo == "Atraso":
         st.subheader("Registro de Atraso")
-        c1, c2 = st.columns(2)
-        with c1:
-            colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_atraso")
-            nf = st.text_input("📄 Nota Fiscal:", key="nf_atraso")
-            pedido = st.text_input("📦 Número do Pedido:", key="ped_atraso")
-        with c2:
-            transp = st.selectbox("🚛 Transportadora:", lista_transportadoras, key="transp_atraso")
-            status = st.selectbox("Status:", ["Entregue", "Cancelado", "Cobrado"], key="status_atraso")
-        
-        if st.button("Registrar Atraso"):
-            motivo_completo = f"Atraso - {status}"
-            salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
-            st.success("Atraso registrado com sucesso!")
-            # Limpa campos manualmente
-            st.session_state["nf_atraso"] = ""
-            st.session_state["ped_atraso"] = ""
-            st.rerun()
+        with st.form("form_atraso", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias)
+                nf = st.text_input("📄 Nota Fiscal:")
+                pedido = st.text_input("📦 Número do Pedido:")
+            with c2:
+                transp = st.selectbox("🚛 Transportadora:", lista_transportadoras)
+                status = st.selectbox("Status:", ["Entregue", "Cancelado", "Cobrado"])
+            
+            submitted = st.form_submit_button("✅ Registrar Atraso")
+            if submitted:
+                motivo_completo = f"Atraso - {status}"
+                salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
+                st.toast("Atraso registrado com sucesso!", icon="✅")
 
     elif tipo_fluxo == "Devolução":
         st.subheader("Registro de Devolução")
-        c1, c2 = st.columns(2)
-        with c1:
-            colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_devolucao")
-            nf = st.text_input("📄 Nota Fiscal:", key="nf_devolucao")
-            pedido = st.text_input("📦 Número do Pedido:", key="ped_devolucao")
-        with c2:
-            transp = st.selectbox("🚛 Transportadora:", lista_transportadoras, key="transp_devolucao")
-            status = st.selectbox("Status:", ["Devolvido", "Cobrado"], key="status_devolucao")
+        with st.form("form_devolucao", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias)
+                nf = st.text_input("📄 Nota Fiscal:")
+                pedido = st.text_input("📦 Número do Pedido:")
+            with c2:
+                transp = st.selectbox("🚛 Transportadora:", lista_transportadoras)
+                status = st.selectbox("Status:", ["Devolvido", "Cobrado"])
             
-        if st.button("Registrar Devolução"):
-            motivo_completo = f"Devolução - {status}"
-            salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
-            st.success("Devolução registrada com sucesso!")
-            # Limpa campos manualmente
-            st.session_state["nf_devolucao"] = ""
-            st.session_state["ped_devolucao"] = ""
-            st.rerun()
+            submitted = st.form_submit_button("✅ Registrar Devolução")
+            if submitted:
+                motivo_completo = f"Devolução - {status}"
+                salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
+                st.toast("Devolução registrada com sucesso!", icon="✅")
 
 # ==========================================
 #           PÁGINA SAC
@@ -602,6 +599,7 @@ def pagina_dashboard():
 
         st.markdown("##")
         
+        # === GRÁFICOS UM EMBAIXO DO OUTRO ===
         st.subheader("📈 Tendência Diária")
         trend = df_f.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
         fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, title="Volume Diário", line_shape="spline", color_discrete_sequence=['#10b981'], text='Atendimentos')
@@ -622,6 +620,7 @@ def pagina_dashboard():
         fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center')
         fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
         st.plotly_chart(fig, use_container_width=True)
+        # =======================================
 
         st.markdown("---")
         st.subheader("📊 Motivos CRM")
