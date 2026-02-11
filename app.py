@@ -372,11 +372,11 @@ def pagina_pendencias():
                 pedido = st.text_input("📦 Número do Pedido:")
             with c2:
                 transp = st.selectbox("🚛 Transportadora:", lista_transportadoras)
-                status = st.selectbox("Status:", ["Entregue", "Cancelado", "Cobrado"])
+                status = st.selectbox("Status:", ["ENTREGUE", "CANCELADO", "COBRADO"])
             
             submitted = st.form_submit_button("✅ Registrar Atraso")
             if submitted:
-                motivo_completo = f"Atraso - {status}"
+                motivo_completo = f"ATRASO - {status}"
                 salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
                 st.toast("Atraso registrado com sucesso!", icon="✅")
 
@@ -390,11 +390,11 @@ def pagina_pendencias():
                 pedido = st.text_input("📦 Número do Pedido:")
             with c2:
                 transp = st.selectbox("🚛 Transportadora:", lista_transportadoras)
-                status = st.selectbox("Status:", ["Devolvido", "Cobrado"])
+                status = st.selectbox("Status:", ["DEVOLVIDO", "COBRADO"])
             
             submitted = st.form_submit_button("✅ Registrar Devolução")
             if submitted:
-                motivo_completo = f"Devolução - {status}"
+                motivo_completo = f"DEVOLUÇÃO - {status}"
                 salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
                 st.toast("Devolução registrada com sucesso!", icon="✅")
 
