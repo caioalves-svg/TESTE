@@ -118,7 +118,6 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
-# LISTA COMPLETA SAC
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -268,11 +267,9 @@ st.sidebar.markdown("---")
 #           CALLBACKS (LÓGICA SEGURA)
 # ==========================================
 def registrar_e_limpar(setor, texto_pronto):
-    # Salva o texto pronto na memória persistente ANTES de limpar os campos
     sufixo = "_p" if setor == "Pendência" else "_s"
     st.session_state[f'texto_persistente{sufixo}'] = texto_pronto
     
-    # Recupera dados do Session State para salvar no Sheets
     colab = st.session_state.get(f"colab{sufixo}")
     motivo_opcao = st.session_state.get(f"msg{sufixo}")
     portal = st.session_state.get(f"portal{sufixo}")
@@ -289,10 +286,12 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # Limpa campos
+        # Limpa campos definindo como string vazia para atualizar a interface
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
+        if setor == "Pendência":
+            campos_para_limpar.extend(["crm_p", "transp_p"])
         if setor == "SAC":
-            campos_para_limpar.extend(["end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
+            campos_para_limpar.extend(["crm_s", "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
             
         for campo in campos_para_limpar:
             if campo in st.session_state:
@@ -308,55 +307,99 @@ def pagina_pendencias():
 
     st.title("🚚 Pendências Logísticas")
     st.markdown("---")
-    col1, col2 = st.columns([1, 1.5], gap="medium")
-    with col1:
-        st.subheader("1. Configuração")
-        colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
-        nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
-        portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
-        nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
-        numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_p")
-        motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_p")
-        transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
-        st.markdown("---")
-        st.subheader("2. Motivo")
-        opcao = st.selectbox("Selecione o caso:", sorted(list(modelos_pendencias.keys())), key="msg_p")
+    
+    # Seletor de Fluxo
+    tipo_fluxo = st.radio("Tipo de Registro:", ["Pendência", "Atraso", "Devolução"], horizontal=True)
+    st.markdown("---")
 
-    with col2:
-        st.subheader("3. Visualização")
-        texto_cru = modelos_pendencias[opcao]
-        nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
-        assinatura_nome = colab if "AMAZON" not in portal else ""
-        texto_base = texto_cru.replace("{transportadora}", str(transp)).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
-        if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
-        
-        # ATUALIZADO: Inclui os novos motivos sem texto
-        motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO", "REENTREGA", "AGUARDANDO TRANSPORTADORA"]
-        
-        if opcao not in motivos_sem_texto:
-            ped_str = numero_pedido if numero_pedido else "..."
-            frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
-            if "\n" in texto_base:
-                partes = texto_base.split("\n", 1)
-                texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
-            else:
-                texto_final = f"{frase_pedido}\n\n{texto_base}"
-        else:
-            texto_final = ""
-        
-        st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
-        st.write("")
-        st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
-        
-        # Passa o texto_final calculado como argumento
-        st.button("✅ Registrar e Copiar", key="btn_save_pend", on_click=registrar_e_limpar, args=("Pendência", texto_final))
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if 'texto_persistente_p' in st.session_state:
+    if tipo_fluxo == "Pendência":
+        # Fluxo Original
+        col1, col2 = st.columns([1, 1.5], gap="medium")
+        with col1:
+            st.subheader("1. Configuração")
+            colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_p")
+            nome_cliente = st.text_input("👤 Nome do Cliente:", key="cliente_p")
+            portal = st.selectbox("🛒 Portal:", lista_portais, key="portal_p")
+            nota_fiscal = st.text_input("📄 Nota Fiscal:", key="nf_p")
+            numero_pedido = st.text_input("📦 Número do Pedido:", key="ped_p")
+            motivo_crm = st.selectbox("📂 Motivo CRM:", lista_motivo_crm, key="crm_p")
+            transp = st.selectbox("🚛 Qual a transportadora?", lista_transportadoras, key="transp_p")
             st.markdown("---")
-            st.info("📝 Último texto registrado (Cópia Segura):")
-            st.code(st.session_state['texto_persistente_p'], language="text")
-            copiar_para_clipboard(st.session_state['texto_persistente_p'])
+            st.subheader("2. Motivo")
+            opcao = st.selectbox("Selecione o caso:", sorted(list(modelos_pendencias.keys())), key="msg_p")
+
+        with col2:
+            st.subheader("3. Visualização")
+            texto_cru = modelos_pendencias[opcao]
+            nome_cliente_str = nome_cliente if nome_cliente else "(Nome do cliente)"
+            assinatura_nome = colab if "AMAZON" not in portal else ""
+            texto_base = texto_cru.replace("{transportadora}", str(transp)).replace("{colaborador}", assinatura_nome).replace("{nome_cliente}", nome_cliente_str).replace("(Nome do cliente)", nome_cliente_str)
+            if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
+            
+            motivos_sem_texto = ["ATENDIMENTO DIGISAC", "2° TENTATIVA DE CONTATO", "3° TENTATIVA DE CONTATO", "REENTREGA", "AGUARDANDO TRANSPORTADORA"]
+            
+            if opcao not in motivos_sem_texto:
+                ped_str = numero_pedido if numero_pedido else "..."
+                frase_pedido = f"O atendimento é referente ao seu pedido de número {ped_str}..."
+                if "\n" in texto_base:
+                    partes = texto_base.split("\n", 1)
+                    texto_final = f"{partes[0]}\n\n{frase_pedido}\n{partes[1]}"
+                else:
+                    texto_final = f"{frase_pedido}\n\n{texto_base}"
+            else:
+                texto_final = ""
+            
+            st.markdown(f'<div class="preview-box">{texto_final}</div>', unsafe_allow_html=True)
+            st.write("")
+            st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
+            st.button("✅ Registrar e Copiar", key="btn_save_pend", on_click=registrar_e_limpar, args=("Pendência", texto_final))
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            if 'texto_persistente_p' in st.session_state:
+                st.markdown("---")
+                st.info("📝 Último texto registrado (Cópia Segura):")
+                st.code(st.session_state['texto_persistente_p'], language="text")
+                copiar_para_clipboard(st.session_state['texto_persistente_p'])
+
+    elif tipo_fluxo == "Atraso":
+        st.subheader("Registro de Atraso")
+        c1, c2 = st.columns(2)
+        with c1:
+            colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_atraso")
+            nf = st.text_input("📄 Nota Fiscal:", key="nf_atraso")
+            pedido = st.text_input("📦 Número do Pedido:", key="ped_atraso")
+        with c2:
+            transp = st.selectbox("🚛 Transportadora:", lista_transportadoras, key="transp_atraso")
+            status = st.selectbox("Status:", ["Entregue", "Cancelado", "Cobrado"], key="status_atraso")
+        
+        if st.button("Registrar Atraso"):
+            motivo_completo = f"Atraso - {status}"
+            salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
+            st.success("Atraso registrado com sucesso!")
+            # Limpa campos manualmente
+            st.session_state["nf_atraso"] = ""
+            st.session_state["ped_atraso"] = ""
+            st.rerun()
+
+    elif tipo_fluxo == "Devolução":
+        st.subheader("Registro de Devolução")
+        c1, c2 = st.columns(2)
+        with c1:
+            colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias, key="colab_devolucao")
+            nf = st.text_input("📄 Nota Fiscal:", key="nf_devolucao")
+            pedido = st.text_input("📦 Número do Pedido:", key="ped_devolucao")
+        with c2:
+            transp = st.selectbox("🚛 Transportadora:", lista_transportadoras, key="transp_devolucao")
+            status = st.selectbox("Status:", ["Devolvido", "Cobrado"], key="status_devolucao")
+            
+        if st.button("Registrar Devolução"):
+            motivo_completo = f"Devolução - {status}"
+            salvar_registro("Pendência", colab, motivo_completo, "-", nf, pedido, "-", transp)
+            st.success("Devolução registrada com sucesso!")
+            # Limpa campos manualmente
+            st.session_state["nf_devolucao"] = ""
+            st.session_state["ped_devolucao"] = ""
+            st.rerun()
 
 # ==========================================
 #           PÁGINA SAC
@@ -494,7 +537,6 @@ def pagina_sac():
         st.write("")
         st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
         
-        # Passa o texto_final (JÁ preenchido) para o callback
         st.button("✅ Registrar e Copiar", key="btn_save_sac", on_click=registrar_e_limpar, args=("SAC", texto_final))
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -560,7 +602,6 @@ def pagina_dashboard():
 
         st.markdown("##")
         
-        # === GRÁFICOS UM EMBAIXO DO OUTRO ===
         st.subheader("📈 Tendência Diária")
         trend = df_f.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
         fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, title="Volume Diário", line_shape="spline", color_discrete_sequence=['#10b981'], text='Atendimentos')
@@ -581,7 +622,6 @@ def pagina_dashboard():
         fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center')
         fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
         st.plotly_chart(fig, use_container_width=True)
-        # =======================================
 
         st.markdown("---")
         st.subheader("📊 Motivos CRM")
@@ -599,7 +639,6 @@ def pagina_dashboard():
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
-        # Correção aplicada: variável gerada antes do botão
         csv_dados = converter_para_excel_csv(df_f)
         st.download_button(label="Baixar CSV", data=csv_dados, file_name="relatorio_engage.csv", mime='text/csv')
         
