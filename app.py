@@ -118,7 +118,7 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
-# LISTA COMPLETA SAC COM OS NOVOS NOMES
+# LISTA COMPLETA SAC
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -562,7 +562,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial")
+    st.title("📊 Dashboard Gerencial (Nuvem)")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
