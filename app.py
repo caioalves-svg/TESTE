@@ -81,7 +81,7 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
-# --- CACHE PARA EVITAR ERRO DE DOWNLOAD ---
+# --- FUNÇÃO COM CACHE PARA EVITAR ERRO DE DOWNLOAD ---
 @st.cache_data(show_spinner=False)
 def converter_para_excel_csv(df):
     df_export = df.copy()
@@ -167,9 +167,6 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
     "COMPROVANTE DE ENTREGA (MARTINS)": "", 
     
-    # --- NOVOS MOTIVOS ---
-    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
-
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -229,7 +226,8 @@ modelos_sac = {
     "TERMO PARA TROCA CASADA": """Olá, (Nome do cliente)!\n\nPara agilizar o processo e tentar realizar a entrega do novo produto no mesmo momento da coleta do antigo, propomos a formalização de um Termo de Acordo Extrajudicial.\n\nO procedimento é simples:\n- Enviaremos o termo pelo nosso Jurídico.\n- Você deve assinar todas as páginas (conforme seu documento de identificação).\n- Envie o termo assinado + foto do documento (RG ou CNH) em até 48 horas.\n- Após validação jurídica, seguiremos com o envio e coleta simultânea.\n\nPodemos seguir com este procedimento?\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "RECUSA DE TROCA (AVARIA)": """Olá, (Nome do cliente)!\n\nConforme informamos, a troca do produto avariado é necessária agora para evitar problemas futuros, uma vez que o prazo de reclamação por danos físicos é limitado.\n\nRespeitamos sua decisão, mas entendemos que, ao recusar a troca neste momento, o(a) senhor(a) está ciente e assume o risco de permanecer com um produto com avaria estética, isentando a loja de reclamações futuras sobre este dano específico.\n\nReforçamos que seu produto continua coberto pela garantia do fabricante exclusivamente para defeitos funcionais, conforme a lei. Avarias físicas não são cobertas pela garantia de fábrica posteriormente.\n\nPermanecemos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "RASTREIO INDISPONÍVEL (JADLOG)": """Olá, (Nome do cliente)!\n\nGostaríamos de tranquilizá-lo(a): seu pedido foi despachado regularmente e segue dentro do prazo de entrega. No momento, o sistema de rastreamento da transportadora apresenta uma instabilidade técnica temporária, impedindo a visualização do status em tempo real.\n\nJá notificamos a transportadora parceira e estamos monitorando o restabelecimento do sistema. Seu pedido continua em movimento normalmente.\n\nAgradecemos a compreensão.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}"""
+    "SOLICITAÇÃO DE FOTOS E VÍDEOS (AVARIA)": """Olá, (Nome do cliente)!\n\nPedimos sinceras desculpas pelos transtornos causados com a chegada do seu produto. Entendemos sua frustração e queremos resolver isso o mais rápido possível.\n\nPara darmos continuidade ao atendimento e agilizarmos a solução junto ao setor responsável, precisamos que nos envie, por gentileza:\n· Fotos nítidas do produto e da embalagem onde consta a avaria;\n· Um breve vídeo mostrando o detalhe do dano (se possível).\n\nAssim que recebermos as evidências, faremos a análise imediata para prosseguir com as tratativas de resolução.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}"""
 }
 
 # ORDENAÇÃO DE LISTA: Alfabética com exceção do 'OUTROS' que fica por último
@@ -240,11 +238,9 @@ lista_motivos_contato.append("OUTROS")
 #           CALLBACKS (LÓGICA SEGURA)
 # ==========================================
 def registrar_e_limpar(setor, texto_pronto):
-    # Salva o texto pronto na memória persistente ANTES de limpar os campos
     sufixo = "_p" if setor == "Pendência" else "_s"
     st.session_state[f'texto_persistente{sufixo}'] = texto_pronto
     
-    # Recupera dados do Session State para salvar no Sheets
     colab = st.session_state.get(f"colab{sufixo}")
     motivo_opcao = st.session_state.get(f"msg{sufixo}")
     portal = st.session_state.get(f"portal{sufixo}")
@@ -289,7 +285,7 @@ def pagina_pendencias():
 
     if tipo_fluxo == "Pendência":
         # ==================================================
-        #  NOVO LAYOUT HORIZONTAL PENDÊNCIAS (SOLICITADO)
+        #  NOVO LAYOUT HORIZONTAL PENDÊNCIAS
         # ==================================================
         st.subheader("1. Configuração")
         
@@ -401,7 +397,7 @@ def pagina_sac():
     st.markdown("---")
     
     # ==================================================
-    #  NOVO LAYOUT HORIZONTAL SAC (SOLICITADO)
+    #  NOVO LAYOUT HORIZONTAL SAC
     # ==================================================
     dados = {}
     
@@ -527,7 +523,6 @@ def pagina_sac():
     elif opcao == "RETIRADA DE ENTREGA":
             # Lógica específica para Retirada
             raw_text = modelos_sac["RETIRADA DE ENTREGA"]
-            # Substitui o placeholder ...... pelo número do pedido real ou mantem ......
             ped_str = numero_pedido if numero_pedido else "......"
             texto_final = raw_text.replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str)
     elif opcao == "ESTOQUE FALTANTE":
@@ -564,7 +559,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial (Nuvem)")
+    st.title("📊 Dashboard Gerencial")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
