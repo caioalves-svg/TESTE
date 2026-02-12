@@ -118,7 +118,6 @@ def copiar_para_clipboard(texto):
 # ==========================================
 colaboradores_pendencias = sorted(["Ana", "Mariana", "Gabriela", "Layra", "Maria Eduarda", "Akisia", "Marcelly", "Camilla", "Michelle"])
 
-# LISTA COMPLETA SAC
 colaboradores_sac = sorted([
     "Ana Carolina", "Ana Victoria", "Eliane", "Cassia", "Juliana", "Tamara", "Rafaela", "Telliane", "Isadora", "Lorrayne", "Leticia", "Julia", "Sara", "Cauê", "Larissa",
     "Marcelly", "Camilla", "Akisia", "Mariana", "Gabriela", "Thais", "Maria Clara", "Izabel", "Jessica", "Marina"
@@ -168,9 +167,6 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
     "COMPROVANTE DE ENTREGA (MARTINS)": "", 
     
-    # --- NOVOS MOTIVOS ---
-    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
-
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -178,6 +174,8 @@ modelos_sac = {
     "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+
+    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
 
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
@@ -260,7 +258,7 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # Limpa campos definindo como string vazia para atualizar a interface
+        # Limpa campos
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         if setor == "Pendência":
             campos_para_limpar.extend(["crm_p", "transp_p"])
@@ -562,7 +560,7 @@ def pagina_sac():
 #           DASHBOARD
 # ==========================================
 def pagina_dashboard():
-    st.title("📊 Dashboard Gerencial (Nuvem)")
+    st.title("📊 Dashboard Gerencial")
     st.markdown("Visão estratégica em tempo real.")
     st.markdown("---")
 
