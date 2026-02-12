@@ -14,6 +14,15 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
+#      MENU LATERAL (DEFINIDO NO INÍCIO)
+# ==========================================
+if os.path.exists("logo.png"):
+    st.sidebar.image("logo.png", width=180)
+st.sidebar.caption("MENU PRINCIPAL")
+pagina_escolhida = st.sidebar.radio("Navegação:", ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), label_visibility="collapsed")
+st.sidebar.markdown("---")
+
+# ==========================================
 #      CONEXÃO GOOGLE SHEETS
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
@@ -258,7 +267,7 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # Limpa campos
+        # Limpa campos definindo como string vazia para atualizar a interface
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         if setor == "Pendência":
             campos_para_limpar.extend(["crm_p", "transp_p"])
