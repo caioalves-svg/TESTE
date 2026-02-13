@@ -16,12 +16,13 @@ st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layo
 # ==========================================
 #      MENU LATERAL (CRIAÇÃO DA VARIÁVEL)
 # ==========================================
-# Esta etapa precisa estar aqui no topo para evitar o NameError
+# Tenta carregar a logo se existir, mas não trava se não existir
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", width=180)
 
 st.sidebar.caption("MENU PRINCIPAL")
-# AQUI É CRIADA A VARIÁVEL pagina_escolhida
+
+# CRIAÇÃO DA VARIÁVEL GLOBAL DE NAVEGAÇÃO
 pagina_escolhida = st.sidebar.radio(
     "Navegação:", 
     ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), 
@@ -181,11 +182,16 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE ENTREGA": "", 
     "INFORMAÇÃO SOBRE O PRODUTO": "", 
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
-    "COMPROVANTE DE ENTREGA (MARTINS)": "",
-    "TRATATIVA DE COBRANÇA": "", 
-    
-    # --- NOVOS MOTIVOS ---
+    "COMPROVANTE DE ENTREGA (MARTINS)": "", 
+    "TRATATIVA DE COBRANÇA": "",
+
+    # --- NOVOS MOTIVOS ADICIONADOS/ATUALIZADOS ---
     "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
+
+    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
+
+    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número ......\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: ................\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. (Nome do colaborador)""",
+    # ----------------------------------------------
 
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
@@ -218,15 +224,6 @@ modelos_sac = {
     "AGRADECIMENTO": """Olá, (Nome do cliente)!\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
-    # --- ATUALIZAÇÃO SOLICITAÇÃO DE COLETA ---
-    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número ......\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: ................\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. (Nome do colaborador)""",
-    # ------------------------------------------
-
-    # --- ENCERRAMENTO DE CHAT ---
-    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
-    # ----------------------------
-
     "ASSISTÊNCIA TÉCNICA (DENTRO DOS 7 DIAS)": """Olá, (Nome do cliente)!\n\nInformamos que o processo de troca via loja possui um prazo total de até 20 dias úteis (contando a partir da data de coleta).\n\nPara solucionar o seu problema de forma muito mais rápida, recomendamos acionar diretamente a assistência técnica da fabricante {fabricante}, que possui prioridade no atendimento. Seguem as informações de contato:\n{contato_assistencia}\n\nCaso a assistência técnica não consiga resolver ou seja inviável, por favor, nos informe. Verificaremos a possibilidade de troca diretamente conosco, mediante a disponibilidade em nosso estoque.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRAZOS DE REEMBOLSO": """Olá, (Nome do cliente)!\n\nA devolução do valor será realizada na mesma forma de pagamento utilizada na compra:\n\n- Boleto Bancário: O reembolso será feito em conta bancária de mesma titularidade ou via vale-presente. Se os dados informados estiverem corretos, o crédito ocorre em até 3 dias úteis.\n- Cartão de Crédito: O estorno será processado pela operadora do cartão e, dependendo da data de fechamento da sua fatura, poderá ser visualizado em uma ou duas faturas subsequentes.\n- PIX: O reembolso será realizado na conta de origem do PIX em até um dia útil.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)": """Olá, (Nome do cliente)!\n\nVerificamos que a sua compra foi realizada no dia {data_compra}, referente à NF-{nota_fiscal}. Desta forma, o pedido encontra-se fora do prazo de 7 dias para cancelamento ou troca direta com a loja. No entanto, seu produto está amparado pela garantia do fabricante, que cobre defeitos de funcionamento.\n\nPara agilizar o reparo, segue o link para localizar o posto autorizado mais próximo de sua residência: {link_posto}\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -265,9 +262,11 @@ lista_motivos_contato.append("OUTROS")
 #           CALLBACKS (LÓGICA SEGURA)
 # ==========================================
 def registrar_e_limpar(setor, texto_pronto):
+    # Salva o texto pronto na memória persistente ANTES de limpar os campos
     sufixo = "_p" if setor == "Pendência" else "_s"
     st.session_state[f'texto_persistente{sufixo}'] = texto_pronto
     
+    # Recupera dados do Session State para salvar no Sheets
     colab = st.session_state.get(f"colab{sufixo}")
     motivo_opcao = st.session_state.get(f"msg{sufixo}")
     portal = st.session_state.get(f"portal{sufixo}")
@@ -284,9 +283,14 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # --- LÓGICA ATUALIZADA: LIMPAR APENAS CAMPOS MANUAIS ---
+        # --- NOVA REGRA DE LIMPEZA ---
+        # Limpa APENAS campos manuais (Input de texto).
+        # Mantém seleções (Selectbox): Colaborador, Portal, Motivo CRM, Transportadora, Motivo Contato.
+        
+        # Campos que DEVEM ser limpos (manuais)
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         
+        # Adiciona campos específicos do SAC se necessário
         if setor == "SAC":
             campos_para_limpar.extend([
                 "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7",
@@ -317,7 +321,7 @@ def pagina_pendencias():
 
     if tipo_fluxo == "Pendência":
         # ==================================================
-        #  NOVO LAYOUT HORIZONTAL PENDÊNCIAS
+        #  LAYOUT HORIZONTAL PENDÊNCIAS
         # ==================================================
         st.subheader("1. Configuração")
         
@@ -429,7 +433,7 @@ def pagina_sac():
     st.markdown("---")
     
     # ==================================================
-    #  NOVO LAYOUT HORIZONTAL SAC
+    #  LAYOUT HORIZONTAL SAC
     # ==================================================
     dados = {}
     
