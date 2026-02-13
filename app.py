@@ -9,9 +9,25 @@ from datetime import datetime
 import streamlit.components.v1 as components
 
 # ==========================================
-#      CONFIGURAÇÃO INICIAL (PRIORIDADE ZERO)
+#      CONFIGURAÇÃO INICIAL (PRIORIDADE 0)
 # ==========================================
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
+
+# ==========================================
+#      MENU LATERAL (CRIAÇÃO DA VARIÁVEL)
+# ==========================================
+# Esta etapa precisa estar aqui no topo para evitar o NameError
+if os.path.exists("logo.png"):
+    st.sidebar.image("logo.png", width=180)
+
+st.sidebar.caption("MENU PRINCIPAL")
+# AQUI É CRIADA A VARIÁVEL pagina_escolhida
+pagina_escolhida = st.sidebar.radio(
+    "Navegação:", 
+    ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), 
+    label_visibility="collapsed"
+)
+st.sidebar.markdown("---")
 
 # ==========================================
 #      CONEXÃO GOOGLE SHEETS
@@ -177,8 +193,6 @@ modelos_sac = {
     "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
-    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
 
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
@@ -204,9 +218,13 @@ modelos_sac = {
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     
-    # --- ATUALIZAÇÃO: SOLICITAÇÃO DE COLETA ---
+    # --- ATUALIZAÇÃO SOLICITAÇÃO DE COLETA ---
     "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número ......\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: ................\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. (Nome do colaborador)""",
     # ------------------------------------------
+
+    # --- ENCERRAMENTO DE CHAT ---
+    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
+    # ----------------------------
 
     "ASSISTÊNCIA TÉCNICA (DENTRO DOS 7 DIAS)": """Olá, (Nome do cliente)!\n\nInformamos que o processo de troca via loja possui um prazo total de até 20 dias úteis (contando a partir da data de coleta).\n\nPara solucionar o seu problema de forma muito mais rápida, recomendamos acionar diretamente a assistência técnica da fabricante {fabricante}, que possui prioridade no atendimento. Seguem as informações de contato:\n{contato_assistencia}\n\nCaso a assistência técnica não consiga resolver ou seja inviável, por favor, nos informe. Verificaremos a possibilidade de troca diretamente conosco, mediante a disponibilidade em nosso estoque.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRAZOS DE REEMBOLSO": """Olá, (Nome do cliente)!\n\nA devolução do valor será realizada na mesma forma de pagamento utilizada na compra:\n\n- Boleto Bancário: O reembolso será feito em conta bancária de mesma titularidade ou via vale-presente. Se os dados informados estiverem corretos, o crédito ocorre em até 3 dias úteis.\n- Cartão de Crédito: O estorno será processado pela operadora do cartão e, dependendo da data de fechamento da sua fatura, poderá ser visualizado em uma ou duas faturas subsequentes.\n- PIX: O reembolso será realizado na conta de origem do PIX em até um dia útil.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -562,6 +580,7 @@ def pagina_sac():
     st.write("")
     st.markdown('<div class="botao-registrar">', unsafe_allow_html=True)
     
+    # Passa o texto_final (JÁ preenchido) para o callback
     st.button("✅ Registrar e Copiar", key="btn_save_sac", on_click=registrar_e_limpar, args=("SAC", texto_final))
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -627,6 +646,7 @@ def pagina_dashboard():
 
         st.markdown("##")
         
+        # === GRÁFICOS UM EMBAIXO DO OUTRO ===
         st.subheader("📈 Tendência Diária")
         trend = df_f.groupby("Data_Filtro").size().reset_index(name='Atendimentos')
         fig = px.line(trend, x="Data_Filtro", y="Atendimentos", markers=True, title="Volume Diário", line_shape="spline", color_discrete_sequence=['#10b981'], text='Atendimentos')
@@ -647,6 +667,7 @@ def pagina_dashboard():
         fig.update_traces(texttemplate='%{y:.1f}%', textposition='top center')
         fig.update_layout(xaxis=dict(tickmode='linear', dtick=1))
         st.plotly_chart(fig, use_container_width=True)
+        # =======================================
 
         st.markdown("---")
         st.subheader("📊 Motivos CRM")
@@ -664,6 +685,7 @@ def pagina_dashboard():
 
         st.markdown("---")
         st.subheader("📥 Exportação Geral")
+        # Correção aplicada: variável gerada antes do botão
         csv_dados = converter_para_excel_csv(df_f)
         st.download_button(label="Baixar CSV", data=csv_dados, file_name="relatorio_engage.csv", mime='text/csv')
         
@@ -673,12 +695,6 @@ def pagina_dashboard():
     except Exception as e:
         st.error(f"Erro no Dashboard: {e}")
 
-# ==========================================
-#      EXECUÇÃO DO MENU (NO FINAL)
-# ==========================================
-if pagina_escolhida == "Pendências Logísticas":
-    pagina_pendencias()
-elif pagina_escolhida == "SAC / Atendimento":
-    pagina_sac()
-else:
-    pagina_dashboard()
+if pagina_escolhida == "Pendências Logísticas": pagina_pendencias()
+elif pagina_escolhida == "SAC / Atendimento": pagina_sac()
+else: pagina_dashboard()
