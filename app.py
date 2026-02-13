@@ -14,15 +14,6 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      MENU LATERAL (DEFINIDO NO INÍCIO)
-# ==========================================
-if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", width=180)
-st.sidebar.caption("MENU PRINCIPAL")
-pagina_escolhida = st.sidebar.radio("Navegação:", ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), label_visibility="collapsed")
-st.sidebar.markdown("---")
-
-# ==========================================
 #      CONEXÃO GOOGLE SHEETS
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
@@ -175,7 +166,12 @@ modelos_sac = {
     "INFORMAÇÃO SOBRE O PRODUTO": "", 
     "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
     "COMPROVANTE DE ENTREGA (MARTINS)": "", 
-    
+    "TRATATIVA DE COBRANÇA": "",
+
+    # --- ENCERRAMENTO DE CHAT ADICIONADO ---
+    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
+    # ---------------------------------------
+
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
 
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -209,7 +205,11 @@ modelos_sac = {
     "AGRADECIMENTO": """Olá, (Nome do cliente)!\n\nQue ótima notícia! Fico muito feliz que tenha dado tudo certo. Sempre que tiver dúvidas, sugestões ou precisar de ajuda, não hesite em nos contatar. Estamos aqui para garantir a sua melhor experiência.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGRADECIMENTO 2": """Disponha!\n\nPermanecemos disponíveis para esclarecer quaisquer dúvidas.\nSempre que precisar de ajuda, tiver sugestões ou necessitar de esclarecimentos adicionais, não hesite em nos contatar.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRÉ-VENDA": """Olá, (Nome do cliente)!\n\n(Insira o texto de pré-venda aqui)\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n- Por favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\n- A transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: {endereco_resumido}\n- É necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
+    
+    # --- ATUALIZAÇÃO SOLICITADA ---
+    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número ......\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: ................\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. (Nome do colaborador)""",
+    # -------------------------------
+    
     "ASSISTÊNCIA TÉCNICA (DENTRO DOS 7 DIAS)": """Olá, (Nome do cliente)!\n\nInformamos que o processo de troca via loja possui um prazo total de até 20 dias úteis (contando a partir da data de coleta).\n\nPara solucionar o seu problema de forma muito mais rápida, recomendamos acionar diretamente a assistência técnica da fabricante {fabricante}, que possui prioridade no atendimento. Seguem as informações de contato:\n{contato_assistencia}\n\nCaso a assistência técnica não consiga resolver ou seja inviável, por favor, nos informe. Verificaremos a possibilidade de troca diretamente conosco, mediante a disponibilidade em nosso estoque.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "PRAZOS DE REEMBOLSO": """Olá, (Nome do cliente)!\n\nA devolução do valor será realizada na mesma forma de pagamento utilizada na compra:\n\n- Boleto Bancário: O reembolso será feito em conta bancária de mesma titularidade ou via vale-presente. Se os dados informados estiverem corretos, o crédito ocorre em até 3 dias úteis.\n- Cartão de Crédito: O estorno será processado pela operadora do cartão e, dependendo da data de fechamento da sua fatura, poderá ser visualizado em uma ou duas faturas subsequentes.\n- PIX: O reembolso será realizado na conta de origem do PIX em até um dia útil.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ASSISTÊNCIA TÉCNICA (FORA DOS 7 DIAS)": """Olá, (Nome do cliente)!\n\nVerificamos que a sua compra foi realizada no dia {data_compra}, referente à NF-{nota_fiscal}. Desta forma, o pedido encontra-se fora do prazo de 7 dias para cancelamento ou troca direta com a loja. No entanto, seu produto está amparado pela garantia do fabricante, que cobre defeitos de funcionamento.\n\nPara agilizar o reparo, segue o link para localizar o posto autorizado mais próximo de sua residência: {link_posto}\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -267,12 +267,19 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # Limpa campos definindo como string vazia para atualizar a interface
+        # --- LÓGICA ATUALIZADA DE LIMPEZA ---
+        # Reseta APENAS campos manuais (texto), preservando as seleções (selectbox)
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
-        if setor == "Pendência":
-            campos_para_limpar.extend(["crm_p", "transp_p"])
+        
         if setor == "SAC":
-            campos_para_limpar.extend(["crm_s", "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", "tr_ent_sac_conf", "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", "link_rast", "nf_rast", "tr_trans_sac", "tr_fisc_sac", "rua_ins", "cep_ins", "num_ins", "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", "data_limite_recusa", "data_entrega_canc_ent"])
+            campos_para_limpar.extend([
+                "end_coleta_sac", "fab_in_7", "cont_assist_in_7", 
+                "data_comp_out_7", "nf_out_7", "link_out_7", "cod_post_sac", 
+                "data_ent_sac", "fab_glp", "site_glp", "val_desc", "prev_ent", 
+                "link_rast", "nf_rast", "rua_ins", "cep_ins", "num_ins", 
+                "bair_ins", "cid_ins", "uf_ins", "comp_ins", "ref_ins", 
+                "data_limite_recusa", "data_entrega_canc_ent"
+            ])
             
         for campo in campos_para_limpar:
             if campo in st.session_state:
@@ -361,7 +368,7 @@ def pagina_pendencias():
 
     elif tipo_fluxo == "Atraso":
         st.subheader("Registro de Atraso")
-        with st.form("form_atraso", clear_on_submit=True):
+        with st.form("form_atraso", clear_on_submit=True): # clear_on_submit APENAS limpa inputs de texto por padrão, selects podem resetar ou manter dependendo da implementação interna do streamlit, aqui forçamos reset total.
             c1, c2 = st.columns(2)
             with c1:
                 colab = st.selectbox("👤 Colaborador:", colaboradores_pendencias)
@@ -509,7 +516,7 @@ def pagina_sac():
     texto_base = texto_base.replace("(Nome do cliente)", nome_cliente_str)
     if portal in ["CNOVA", "CNOVA - EXTREMA", "PONTO", "CASAS BAHIA"]: texto_base = texto_base.replace(f"Olá, {nome_cliente_str}", f"Olá, {nome_cliente_str}!")
     
-    excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)", "PEDIDO AMAZON FBA", "BAIXA ERRÔNEA", "COBRANÇA INDEVIDA", "INFORMAÇÃO EMBALAGEM", "RETIRADA DE ENTREGA"] + lista_livre_escrita
+    excecoes_nf = ["SAUDAÇÃO", "AGRADECIMENTO", "AGRADECIMENTO 2", "PRÉ-VENDA", "BARRAR ENTREGA NA TRANSPORTADORA", "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)", "ESTOQUE FALTANTE", "COMPROVANTE DE ENTREGA (MARTINS)", "PEDIDO AMAZON FBA", "BAIXA ERRÔNEA", "COBRANÇA INDEVIDA", "INFORMAÇÃO EMBALAGEM", "RETIRADA DE ENTREGA", "ENCERRAMENTO DE CHAT"] + lista_livre_escrita
     scripts_martins = ["CANCELAMENTO MARTINS (FRETE)", "CANCELAMENTO MARTINS (ESTOQUE)", "CANCELAMENTO MARTINS (PREÇO)"]
     
     if opcao not in excecoes_nf and opcao not in scripts_martins:
@@ -535,6 +542,12 @@ def pagina_sac():
             raw_text = modelos_sac["RETIRADA DE ENTREGA"]
             ped_str = numero_pedido if numero_pedido else "......"
             texto_final = raw_text.replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str)
+    elif opcao == "SOLICITAÇÃO DE COLETA":
+            # Lógica específica para Solicitação de Coleta
+            raw_text = modelos_sac["SOLICITAÇÃO DE COLETA"]
+            ped_str = numero_pedido if numero_pedido else "......"
+            end_res = dados.get("{endereco_resumido}", "................")
+            texto_final = raw_text.replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str).replace("................", end_res)
     elif opcao == "ESTOQUE FALTANTE":
             texto_final = texto_base.replace("{portal}", str(portal))
     elif opcao == "COMPROVANTE DE ENTREGA (MARTINS)":
