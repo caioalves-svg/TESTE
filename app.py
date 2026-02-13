@@ -16,7 +16,6 @@ st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layo
 # ==========================================
 #      2. MENU LATERAL (CRIAÇÃO IMEDIATA)
 # ==========================================
-# Definimos a navegação logo no início para evitar o NameError no final
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", width=180)
 
@@ -168,16 +167,23 @@ modelos_pendencias = {
 #      SCRIPTS SAC
 # ==========================================
 modelos_sac = {
-    "OUTROS": "", "RECLAME AQUI": "", "INFORMAÇÃO SOBRE COLETA": "", "INFORMAÇÃO SOBRE ENTREGA": "", "INFORMAÇÃO SOBRE O PRODUTO": "", "INFORMAÇÃO SOBRE O REEMBOLSO": "", "COMPROVANTE DE ENTREGA (MARTINS)": "", "TRATATIVA DE COBRANÇA": "",
+    "OUTROS": "", 
+    "RECLAME AQUI": "",
+    "INFORMAÇÃO SOBRE COLETA": "", 
+    "INFORMAÇÃO SOBRE ENTREGA": "", 
+    "INFORMAÇÃO SOBRE O PRODUTO": "", 
+    "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
+    "COMPROVANTE DE ENTREGA (MARTINS)": "", 
+    "TRATATIVA DE COBRANÇA": "",
 
-    # --- ENCERRAMENTO DE CHAT ---
+    # --- NOVOS MOTIVOS ADICIONADOS/ATUALIZADOS ---
+    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: {numero_pedido}\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
+
     "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n{colaborador}""",
 
-    # --- SOLICITAÇÃO DE COLETA (CORRIGIDO) ---
-    # Aqui usamos chaves {} para que o Python identifique os locais exatos de troca e não confunda "......"
     "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número {numero_pedido}\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: {endereco_resumido}\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. {colaborador}""",
-    
-    "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
+    # ----------------------------------------------
+
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -261,11 +267,7 @@ def registrar_e_limpar(setor, texto_pronto):
     if sucesso:
         st.session_state[f'sucesso_recente{sufixo}'] = True
         
-        # --- NOVA REGRA DE LIMPEZA ---
-        # Limpa APENAS campos manuais (Input de texto).
-        # Mantém seleções (Selectbox): Colaborador, Portal, Motivo CRM, Transportadora, Motivo Contato.
-        
-        # Campos que DEVEM ser limpos (manuais)
+        # --- LÓGICA ATUALIZADA: LIMPAR APENAS CAMPOS MANUAIS ---
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         
         if setor == "SAC":
@@ -534,14 +536,18 @@ def pagina_sac():
             ped_str = numero_pedido if numero_pedido else "......"
             texto_final = f"Olá, {nome_cliente_str}!\nO atendimento é referente ao seu pedido de número {ped_str}\n\n{corpo_mensagem}"
     elif opcao == "RETIRADA DE ENTREGA":
+            # CORREÇÃO: Substituição explícita de campos específicos
             raw_text = modelos_sac["RETIRADA DE ENTREGA"]
             ped_str = numero_pedido if numero_pedido else "......"
-            texto_final = raw_text.replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str)
+            texto_final = raw_text.replace("{numero_pedido}", ped_str).replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str)
     elif opcao == "SOLICITAÇÃO DE COLETA":
+            # CORREÇÃO: Substituição explícita de campos específicos
             raw_text = modelos_sac["SOLICITAÇÃO DE COLETA"]
             ped_str = numero_pedido if numero_pedido else "......"
             end_res = dados.get("{endereco_resumido}", "................")
-            texto_final = raw_text.replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str).replace("................", end_res)
+            texto_final = raw_text.replace("{numero_pedido}", ped_str).replace("......", ped_str).replace("(Nome do cliente)", nome_cliente_str).replace("{endereco_resumido}", end_res).replace("................", end_res)
+    elif opcao == "ENCERRAMENTO DE CHAT":
+            texto_final = modelos_sac["ENCERRAMENTO DE CHAT"].replace("(Nome do cliente)", nome_cliente_str)
     elif opcao == "ESTOQUE FALTANTE":
             texto_final = texto_base.replace("{portal}", str(portal))
     elif opcao == "COMPROVANTE DE ENTREGA (MARTINS)":
