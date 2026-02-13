@@ -9,20 +9,18 @@ from datetime import datetime
 import streamlit.components.v1 as components
 
 # ==========================================
-#      CONFIGURAÇÃO INICIAL (PRIORIDADE 0)
+#      1. CONFIGURAÇÃO INICIAL (PRIORIDADE ZERO)
 # ==========================================
 st.set_page_config(page_title="Sistema Integrado Engage", page_icon="🚀", layout="wide")
 
 # ==========================================
-#      MENU LATERAL (CRIAÇÃO DA VARIÁVEL)
+#      2. MENU LATERAL (CRIAÇÃO IMEDIATA)
 # ==========================================
-# Tenta carregar a logo se existir, mas não trava se não existir
+# Definimos a navegação logo no início para evitar o NameError no final
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", width=180)
 
 st.sidebar.caption("MENU PRINCIPAL")
-
-# CRIAÇÃO DA VARIÁVEL GLOBAL DE NAVEGAÇÃO
 pagina_escolhida = st.sidebar.radio(
     "Navegação:", 
     ("Pendências Logísticas", "SAC / Atendimento", "📊 Dashboard Gerencial"), 
@@ -31,7 +29,7 @@ pagina_escolhida = st.sidebar.radio(
 st.sidebar.markdown("---")
 
 # ==========================================
-#      CONEXÃO GOOGLE SHEETS
+#      3. FUNÇÕES E CONEXÕES
 # ==========================================
 NOME_PLANILHA_GOOGLE = "Base_Atendimentos_Engage" 
 
@@ -98,7 +96,6 @@ def salvar_registro(setor, colaborador, motivo, portal, nf, numero_pedido, motiv
             return False
     return False
 
-# --- FUNÇÃO COM CACHE PARA EVITAR ERRO DE DOWNLOAD ---
 @st.cache_data(show_spinner=False)
 def converter_para_excel_csv(df):
     df_export = df.copy()
@@ -150,15 +147,10 @@ lista_motivo_crm = sorted(["ACAREAÇÃO", "ACORDO CLIENTE", "ALTERAÇÃO DE NOTA
 modelos_pendencias = {
     "ATENDIMENTO DIGISAC": "", "2° TENTATIVA DE CONTATO": "", "3° TENTATIVA DE CONTATO": "",
     "REENTREGA": "", "AGUARDANDO TRANSPORTADORA": "",
-    
     "ACAREAÇÃO": """Olá, (Nome do cliente)! Tudo bem?\n\nIdentificamos uma divergência na entrega do seu pedido e, por isso, abrimos um chamado de acareação com a transportadora.\n\nNeste procedimento, o motorista retorna ao local para identificar quem recebeu a mercadoria e validar as informações fornecidas. O prazo para a conclusão desta análise é de até 7 dias úteis.\n\nAssim que tivermos o parecer final, entraremos em contato imediatamente com a resolução.\n\nAtenciosamente,\n{colaborador}""",
-    
     "DEVOLUÇÃO INDEVIDA": """Olá, (Nome do cliente)! Tudo bem?\n\nLamentamos informar que o seu pedido retornou indevidamente ao nosso centro de distribuição por um erro operacional.\n\nPara resolvermos da melhor forma para você, como prefere seguir?\n\nReenvio: Geramos um novo envio prioritário da sua mercadoria.\nCancelamento: Realizamos o estorno integral do valor pago.\n\nPedimos sinceras desculpas pelo transtorno. Ficamos no aguardo da sua escolha para prosseguir.\n\nAtenciosamente,\n{colaborador}""",
-    
     "SOLICITAÇÃO DE CONTATO": """Olá, (Nome do cliente)! Tudo bem?\n\nQueremos garantir que sua mercadoria chegue com agilidade e sem novos desencontros.\n\nPor gentileza, você poderia nos informar um número de telefone atualizado (com DDD)? Assim, podemos alinhar os detalhes diretamente com a transportadora e facilitar o acesso ao seu endereço.\n\nAguardamos seu retorno!\n\nAtenciosamente,\n{colaborador}""",
-    
     "EXTRAVIO / AVARIA (SEM ESTOQUE)": """Olá, (Nome do cliente)! Tudo bem?\n\nDurante o transporte, fomos notificados de que sua mercadoria sofreu um imprevisto (extravio/avaria). Infelizmente, verificamos que este item não está mais disponível em nosso estoque para reposição imediata.\n\nDevido a isso, seguiremos com o cancelamento da compra e o reembolso total do valor.\n\nSentimos muito por não conseguir entregar o seu produto desta vez e pedimos desculpas por qualquer frustração causada. Se houver algo mais que possamos fazer, estamos à disposição.\n\nAtenciosamente,\n{colaborador}""",
-
     "AUSENTE": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria no endereço cadastrado, porém, o responsável pelo recebimento estava ausente.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo?\n\nRua: \nNúmero: \nBairro: \nCEP: \nCidade: \nEstado: \nPonto de Referência: \nRecebedor: \nTelefone: \n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\n{colaborador}""",
     "ENDEREÇO NÃO LOCALIZADO": """Olá, (Nome do cliente)! Tudo bem? Esperamos que sim!\n\nA transportadora {transportadora} tentou realizar a entrega de sua mercadoria, porém, não localizou o endereço.\n\nPara solicitarmos uma nova tentativa de entrega à transportadora, poderia por gentileza, nos confirmar dados abaixo:\n\nRua:\nNúmero:\nBairro:\nCEP:\nCidade:\nEstado:\nPonto de Referência:\nRecebedor:\nTelefone:\n\nApós a confirmação dos dados acima, iremos solicitar que a transportadora realize uma nova tentativa de entrega que irá ocorrer no prazo de até 3 a 5 dias úteis. Caso não tenhamos retorno, o produto será devolvido ao nosso Centro de Distribuição e seguiremos com o cancelamento da compra.\n\nAtenciosamente,\n{colaborador}""",
     "ÁREA DE RISCO": """Olá, (Nome do cliente)! Tudo bem? Espero que sim!\n\nA transportadora {transportadora}, informou que está com dificuldades para realizar a entrega no endereço cadastrado no portal. Dessa forma, peço por gentileza que nos informe um endereço alternativo e também telefones ativos para melhor comunicação.\n\nCaso não possua um outro endereço, sua mercadoria ficará disponível para retirada da base da transportadora.\n\nQualquer dúvida me coloco à disposição para ajudá-lo!\n\nAtenciosamente,\n{colaborador}""",
@@ -176,37 +168,23 @@ modelos_pendencias = {
 #      SCRIPTS SAC
 # ==========================================
 modelos_sac = {
-    "OUTROS": "", 
-    "RECLAME AQUI": "",
-    "INFORMAÇÃO SOBRE COLETA": "", 
-    "INFORMAÇÃO SOBRE ENTREGA": "", 
-    "INFORMAÇÃO SOBRE O PRODUTO": "", 
-    "INFORMAÇÃO SOBRE O REEMBOLSO": "", 
-    "COMPROVANTE DE ENTREGA (MARTINS)": "", 
-    "TRATATIVA DE COBRANÇA": "",
+    "OUTROS": "", "RECLAME AQUI": "", "INFORMAÇÃO SOBRE COLETA": "", "INFORMAÇÃO SOBRE ENTREGA": "", "INFORMAÇÃO SOBRE O PRODUTO": "", "INFORMAÇÃO SOBRE O REEMBOLSO": "", "COMPROVANTE DE ENTREGA (MARTINS)": "", "TRATATIVA DE COBRANÇA": "",
 
-    # --- NOVOS MOTIVOS ADICIONADOS/ATUALIZADOS ---
+    # --- ENCERRAMENTO DE CHAT ---
+    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n{colaborador}""",
+
+    # --- SOLICITAÇÃO DE COLETA (CORRIGIDO) ---
+    # Aqui usamos chaves {} para que o Python identifique os locais exatos de troca e não confunda "......"
+    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número {numero_pedido}\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: {endereco_resumido}\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. {colaborador}""",
+    
     "RETIRADA DE ENTREGA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número: ......\n\nPara autorizarmos a sua retirada, solicitamos o envio dos dados abaixo para a liberação do seu acesso ao galpão:\n\nNOME DO TITULAR:\nCPF:\nPLACA DO VEÍCULO:\nMARCA/MODELO:\nFOTO DO DOCUMENTO (RG OU CNH)\n\nRessaltamos que, por se tratar de uma unidade logística parceira, o envio dessas informações é um protocolo obrigatório de segurança para o controle de entrada.\n\nAtenciosamente,\nEquipe de Atendimento Engage Eletro\n{colaborador}""",
-
-    "ENCERRAMENTO DE CHAT": """Prezado(a) (Nome do cliente),\n\nInformamos que este chamado está sendo encerrado.\n\nCaso surjam novas dúvidas ou a necessidade de suporte adicional, por favor, abra um novo protocolo para que possamos dar continuidade ao seu atendimento.\n\nAtenciosamente,\n(Nome do colaborador)""",
-
-    "SOLICITAÇÃO DE COLETA": """Olá, (Nome do cliente)!\n\nO atendimento é referente ao seu pedido de número ......\n\nVerificamos que o seu pedido está dentro do prazo para troca/cancelamento. Sendo assim, já solicitamos ao setor responsável a emissão da Nota Fiscal de coleta e o acionamento da transportadora para realizar o recolhimento da mercadoria.\n\nInstruções de devolução:\n\nPor favor, devolva as mercadorias em suas embalagens originais ou similares, devidamente protegidas.\nA transportadora realizará a coleta no endereço de entrega nos próximos 15/20 dias úteis: ................\nÉ necessário colocar dentro da embalagem uma cópia da Nota Fiscal.\n\nRessaltamos que, assim que a coleta for confirmada, daremos continuidade ao seu atendimento conforme solicitado. A coleta ocorre na portaria ou no portão do endereço, não sendo permitida a entrada da transportadora no interior do imóvel.\n\nEquipe de atendimento Engage Eletro. (Nome do colaborador)""",
-    # ----------------------------------------------
-
     "BAIXA ERRÔNEA": """Olá, (Nome do cliente).\n\nGostaríamos de pedir sinceras desculpas por uma falha operacional. Identificamos que o seu pedido foi marcado como "entregue" ou "finalizado" precocemente em nosso sistema, mas confirmamos que ele ainda está em processo de envio.\n\nJá estamos corrigindo essa informação internamente. Para sua tranquilidade, o prazo de entrega permanece o mesmo e você receberá o código de rastreio atualizado em breve.\n\nFique tranquilo(a): não haverá qualquer prejuízo ao seu recebimento. Agradecemos sua paciência e seguimos à disposição.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "COBRANÇA INDEVIDA": """Olá, (Nome do cliente).\n\nPedimos desculpas pela mensagem de cobrança enviada anteriormente. Houve um erro sistêmico e solicitamos que, por gentileza, desconsidere o aviso.\n\nVerificamos aqui que seu pedido já foi devidamente concluído e está tudo certo com o seu pagamento. Lamentamos o equívoco e seguimos à disposição para qualquer dúvida.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "INFORMAÇÃO EMBALAGEM": """Olá, (Nome do cliente).\n\nEntendemos seu questionamento. Para garantir que você receba o produto exatamente como ele sai da linha de produção, nós o enviamos na embalagem original selada pelo fabricante.\n\nComo trabalhamos com esse fluxo direto do fabricante para o nosso Centro de Distribuição, não rompemos o lacre para análise individual, garantindo assim que o item seja 100% novo e nunca manuseado. Caso tenha notado algo fora do esperado ao abrir o pacote, por favor, nos avise para que possamos te ajudar imediatamente!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "PEDIDO AMAZON FBA": """Olá, (Nome do cliente)!\n\nVerificamos que o seu pedido foi realizado na modalidade Amazon Full (FBA). Isso significa que o produto já estava no centro de distribuição da Amazon e que eles são os responsáveis exclusivos pelo armazenamento, separação e entrega, bem como por qualquer suporte logístico.\n\nPor questões de segurança e acesso ao sistema, apenas o Suporte ao Cliente da Amazon consegue verificar o status da entrega ou realizar novas tentativas.\n\nComo falar com eles:\nAcesse sua conta Amazon e vá em "Seus Pedidos".\nSelecione este pedido e clique em "Ajuda".\nOu acesse: amazon.com.br/contato.\n\nEstamos à disposição para qualquer outra dúvida!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "ESTOQUE FALTANTE": """Olá, (Nome do cliente)!\n\nGostaríamos de pedir sinceras desculpas, mas tivemos um erro técnico em nosso anúncio e, infelizmente, o produto que você comprou está temporariamente fora de estoque.\n\nPara sua segurança e comodidade, a {portal} processará o seu reembolso automaticamente nos próximos dias.\n\nLamentamos muito pelo transtorno e já estamos trabalhando para que isso não ocorra novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-    
     "SAUDAÇÃO": """Olá, (Nome do cliente)!\n\nMe chamo {colaborador} e vou prosseguir com o seu atendimento.\nComo posso ajudar?""",
-    
     "ALTERAÇÃO DE ENDEREÇO (SOLICITAÇÃO DE DADOS)": """Olá, (Nome do cliente)!\n\nPodemos verificar a possibilidade de alteração de endereço desde que não haja uma mudança referente a CIDADE ou ESTADO. Gentileza encaminhar o endereço completo no formato abaixo:\n\nRua:\nCep:\nNúmero:\nBairro:\nCidade:\nEstado:\nComplemento:\nPonto de Referência:\n2 telefones ativos:\n\nApós o envio dos dados, estaremos gerando uma Carta de Correção de Endereço e encaminhando para a transportadora para verificamos a possibilidade de entrega no local indicado.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
-
     "BARRAR ENTREGA NA TRANSPORTADORA": """Olá, (Nome do cliente)!\n\nSolicitamos à transportadora responsável o bloqueio da entrega. No entanto, caso haja alguma tentativa de entrega no local, pedimos a gentileza de recusar o recebimento no ato.\n\nGostaríamos de informar que o pedido de barragem é definitivo. Por questões logísticas, após essa solicitação, não conseguimos reverter o processo para seguir com a entrega novamente.\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "ENTREGA RECUSADA": """Olá, (Nome do cliente). Tudo bem?\n\nRecebemos uma notificação da transportadora informando que a entrega do seu pedido foi recusada no endereço de destino.\n\nHouve algum problema na tentativa de entrega ou avaria na embalagem?\n\n· Se deseja receber o produto: Por gentileza, nos confirme o endereço e pontos de referência.\n· Se deseja cancelar: Nos informe por aqui para agilizarmos o processo.\n\nAtenção:\nCaso não tenhamos retorno até {data_limite}, o produto retornará ao nosso estoque e seguiremos com o cancelamento automático.\n\nAguardo seu retorno!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
     "AGUARDANDO RETORNO (FOLLOW UP)": """Olá, (Nome do cliente).\n\nPassando para informar que seu caso continua sendo tratado como prioridade por nossa equipe.\n\nJá acionamos o setor responsável/transportadora e estamos apenas aguardando a formalização da resposta para lhe posicionar com a solução definitiva. Não se preocupe, estou acompanhando pessoalmente o seu pedido.\n\nAssim que tiver o retorno, entro em contato imediatamente. Obrigado pela paciência!\n\nEquipe de atendimento Engage Eletro.\n{colaborador}""",
@@ -290,7 +268,6 @@ def registrar_e_limpar(setor, texto_pronto):
         # Campos que DEVEM ser limpos (manuais)
         campos_para_limpar = [f"cliente{sufixo}", f"nf{sufixo}", f"ped{sufixo}"]
         
-        # Adiciona campos específicos do SAC se necessário
         if setor == "SAC":
             campos_para_limpar.extend([
                 "end_coleta_sac", "fab_in_7", "cont_assist_in_7", "data_comp_out_7",
