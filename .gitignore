@@ -1,0 +1,17 @@
+# Segredos — NUNCA commitar
+.streamlit/secrets.toml
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# Logs
+*.log
+streamlit.log
+
+# IDEs
+.vscode/
+.idea/

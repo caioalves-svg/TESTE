@@ -1,0 +1,7 @@
+[theme]
+base            = "light"
+primaryColor    = "#2563eb"
+backgroundColor = "#f1f5f9"
+secondaryBackgroundColor = "#dde3ed"   # sidebar — cinza azulado claro
+textColor       = "#1e293b"
+font            = "sans serif"

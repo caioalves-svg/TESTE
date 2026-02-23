@@ -1,0 +1,158 @@
+/* --- style.css --- */
+
+/* 1. IMPORTANDO FONTE MODERNA (INTER) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* RESET GERAL */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    color: #1e293b; /* Cinza escuro elegante */
+}
+
+/* 2. FUNDO DA PÁGINA */
+.stApp {
+    background-color: #f1f5f9; /* Cinza Gelo */
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-size: 20px 20px; /* Textura sutil de pontos */
+}
+
+/* 3. BARRA LATERAL (SIDEBAR) — cor definida em .streamlit/config.toml */
+section[data-testid="stSidebar"] {
+    border-right: 1px solid #cbd5e1;
+}
+
+/* Botão Sair — vermelho discreto */
+section[data-testid="stSidebar"] .stButton button {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 8px -2px rgba(220, 38, 38, 0.4);
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+section[data-testid="stSidebar"] .stButton button:hover {
+    box-shadow: 0 8px 15px -3px rgba(220, 38, 38, 0.5);
+}
+
+/* 4. TÍTULOS PRINCIPAIS */
+h1 {
+    color: #1e40af; /* Azul Royal Profissional */
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    font-size: 2.5rem;
+}
+
+h2, h3 {
+    color: #334155;
+    font-weight: 600;
+}
+
+/* 5. INPUTS (CAIXAS DE SELEÇÃO E TEXTO) */
+.stSelectbox, .stTextArea, .stTextInput {
+    margin-bottom: 1rem;
+}
+
+/* Selectbox */
+.stSelectbox div[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+/* Text Input — fundo branco */
+.stTextInput input {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    font-size: 15px;
+    padding: 10px 14px;
+    color: #1e293b !important;
+    transition: all 0.2s;
+}
+
+/* Placeholder visível */
+.stTextInput input::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* TextArea */
+.stTextArea textarea {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    font-size: 15px;
+    padding: 15px;
+    color: #1e293b !important;
+}
+
+/* Efeito de foco */
+.stSelectbox div[data-baseweb="select"] > div:focus-within,
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    outline: none;
+}
+
+/* Container do text input (remove fundo herdado) */
+.stTextInput > div > div {
+    background-color: transparent !important;
+}
+
+/* 6. BOTÕES (O Destaque) */
+.stButton button {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); /* Gradiente Azul */
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stButton button:hover {
+    transform: translateY(-3px) scale(1.02); /* Sobe e cresce um pouquinho */
+    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.4);
+}
+
+.stButton button:active {
+    transform: translateY(0);
+}
+
+/* 7. MENSAGENS DE SUCESSO */
+div[data-baseweb="notification"] {
+    background-color: #dcfce7;
+    border: 1px solid #86efac;
+    color: #14532d;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* 8. LABEL DOS CAMPOS */
+label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+/* 9. BOTÃO LIMPAR — cinza neutro, menor destaque */
+div[data-testid="column"]:last-child .stButton button {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    box-shadow: 0 4px 8px -2px rgba(100, 116, 139, 0.3);
+}
+
+div[data-testid="column"]:last-child .stButton button:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 8px 15px -3px rgba(220, 38, 38, 0.4);
+    transform: translateY(-2px);
+}
